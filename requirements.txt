@@ -1,0 +1,3 @@
+sudo apt install apache2 mariadb-server libmariadbclient-dev php libapache2-mod-php php-mysql python3-dev pip3 
+
+pip3 install virtualenv django jinja2 requests python-libsbml mysqlclient

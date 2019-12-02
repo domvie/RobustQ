@@ -12,6 +12,12 @@ https://docs.djangoproject.com/en/2.2/ref/settings/
 
 import os
 
+try:
+    from .local_config import DB
+except ImportError as e:
+    raise ImportError("Couldn't find/import configuration file local_config.py. Please check whether it exists and "
+                      "configure it accordingly (ie., add database connection configurations etc.") from e
+
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -31,6 +37,7 @@ ALLOWED_HOSTS = []
 # Application definition
 
 INSTALLED_APPS = [
+    'index.apps.IndexConfig',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -67,6 +74,18 @@ TEMPLATES = [
             ],
         },
     },
+    {
+        'BACKEND': 'django.template.backends.django.DjangoTemplates',
+        'DIRS': [os.path.join(BASE_DIR, 'templates')],
+        'OPTIONS': {
+            'context_processors': [
+                'django.template.context_processors.debug',
+                'django.template.context_processors.request',
+                'django.contrib.auth.context_processors.auth',
+                'django.contrib.messages.context_processors.messages',
+            ],
+        },
+    }
 ]
 
 WSGI_APPLICATION = 'RobustQ.wsgi.application'
@@ -77,8 +96,12 @@ WSGI_APPLICATION = 'RobustQ.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': 'RobustQ',
+        'USER': DB['USER'],
+        'PASSWORD': DB['PW'],
+        'HOST': 'localhost',
+        'PORT': '',
     }
 }
 
@@ -120,3 +143,8 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/2.2/howto/static-files/
 
 STATIC_URL = '/static/'
+
+# TODO set to e.g. STATIC_ROOT = "/var/www/example.com/static/"
+# see https://docs.djangoproject.com/en/2.2/howto/static-files/
+STATIC_ROOT = '/static/'
+
