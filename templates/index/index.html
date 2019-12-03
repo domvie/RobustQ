@@ -1,12 +1,17 @@
 {% extends 'includes/layout.html' %}
 
 <!-- <title> -->
-{% block title %} {{ super() }} {% endblock title %}
+{% block title %} {{ block.super }} {% endblock title %}
 <!-- </title> -->
 
 <!-- <body> -->
 {% block content %}
 
-    Index
+    <ol class="pl-3">
+      <li class="mb-3">dasdad your logo image inside<code>a.navbar-brand</code></li>
+      <li class="mb-3">You can set the logo width and height by<code>width=""</code>,<code>height=""</code> attributes.</li>
+      <li class="mb-3">Add one of <code>.align-top .align-middle .align-bottom</code> classes to vertically adapt adjacent text with the image.</li>
+    </ol>
+
 {% endblock content %}
 <!-- </body> -->

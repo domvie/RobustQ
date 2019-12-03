@@ -38,6 +38,8 @@ ALLOWED_HOSTS = []
 
 INSTALLED_APPS = [
     'index.apps.IndexConfig',
+    'jobs.apps.JobsConfig',
+    'users.apps.UsersConfig',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -60,7 +62,7 @@ ROOT_URLCONF = 'RobustQ.urls'
 
 TEMPLATES = [
     {
-        'BACKEND': 'django.template.backends.jinja2.Jinja2'
+        'BACKEND': 'django.template.backends.django.DjangoTemplates'
         ,
         'DIRS': [os.path.join(BASE_DIR, 'templates')]
         ,
@@ -74,18 +76,18 @@ TEMPLATES = [
             ],
         },
     },
-    {
-        'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [os.path.join(BASE_DIR, 'templates')],
-        'OPTIONS': {
-            'context_processors': [
-                'django.template.context_processors.debug',
-                'django.template.context_processors.request',
-                'django.contrib.auth.context_processors.auth',
-                'django.contrib.messages.context_processors.messages',
-            ],
-        },
-    }
+    # {
+    #     'BACKEND': 'django.template.backends.django.DjangoTemplates',
+    #     'DIRS': [os.path.join(BASE_DIR, 'templates')],
+    #     'OPTIONS': {
+    #         'context_processors': [
+    #             'django.template.context_processors.debug',
+    #             'django.template.context_processors.request',
+    #             'django.contrib.auth.context_processors.auth',
+    #             'django.contrib.messages.context_processors.messages',
+    #         ],
+    #     },
+    # }
 ]
 
 WSGI_APPLICATION = 'RobustQ.wsgi.application'
@@ -146,5 +148,9 @@ STATIC_URL = '/static/'
 
 # TODO set to e.g. STATIC_ROOT = "/var/www/example.com/static/"
 # see https://docs.djangoproject.com/en/2.2/howto/static-files/
-STATIC_ROOT = '/static/'
+#STATIC_ROOT = 'static/'
 
+STATICFILES_DIRS = [
+    os.path.join(BASE_DIR, "static"),
+    # '/var/www/static/',
+]

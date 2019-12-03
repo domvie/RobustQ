@@ -1,16 +1,30 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    {% load static %}
     <!-- Bootstrap CSS -->
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css" integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh" crossorigin="anonymous">
-
+    <link rel="stylesheet" href="{% static "css/footer.css" %}">
     <meta charset="UTF-8">
     <title>{% block title %}RobustQ - a web service to quantify cellular robustness{% endblock title %}</title>
 </head>
 <body>
     {% include 'includes/navbar.html' %}
+
+        <!-- Content goes here -->
+    <section class="py-5">
+      <div class="container py-5">
     {% block content %}
     {% endblock content %}
+      </div>
+    </section>
+
+<footer id="sticky-footer" class="footer py-3 navbar-fixed-bottom">
+  <div class="container">
+    <span class="text-muted">Footer content here.</span>
+  </div>
+</footer>
+    <!-- end content -->
     <!-- JavaScript imports -->
     <!-- jQuery first, then Popper.js, then Bootstrap JS -->
     <script src="https://code.jquery.com/jquery-3.4.1.slim.min.js" integrity="sha384-J6qa4849blE2+poT4WnyKhv5vZF5SrPo0iEjwBvKU7imGFAV0wwj1yYfoRSJoZ+n" crossorigin="anonymous"></script>
