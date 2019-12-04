@@ -1,7 +1,7 @@
 {% extends 'includes/layout.html' %}
 
 <!-- <title> -->
-{% block title %} RobustQ registration {% endblock title %}
+{% block title %} RobustQ Login {% endblock title %}
 <!-- </title> -->
 
 {% load crispy_forms_tags %}
@@ -12,15 +12,15 @@
             <form method="POST">
                 {% csrf_token %}
                 <fieldset class="form-group">
-                        <legend class="border-bottom mb-4">Create Account</legend>
+                        <legend class="border-bottom mb-4">Login</legend>
                     {{ form|crispy }}
                 </fieldset>
                 <div class="form-group">
-                    <button class="btn btn-outline-info" type="submit">Submit</button>
+                    <button class="btn btn-outline-info" type="submit">Login</button>
                 </div>
             </form>
             <div class="border-top pt-3">
-                <small class="text-muted">Already have an account? <a class="ml-2" href="{% url 'login' %}">Sign In</a></small>
+                <small class="text-muted">Need an account? <a class="ml-2" href="{% url 'register' %}">Register Now</a></small>
             </div>
         </div>
     </div>

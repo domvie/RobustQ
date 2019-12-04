@@ -15,13 +15,9 @@ Including another URLconf
 """
 from django.urls import path
 from . import views
-from users import views as user_views
-from jobs import views as job_views
 
 urlpatterns = [
     path('', views.home, name='index-home'),
     path('about/', views.about, name='index-about'),
-    path('register/', user_views.register, name='register'),
-    path('jobs/', job_views.overview, name='jobs'),
 
 ]

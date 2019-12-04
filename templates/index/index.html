@@ -1,17 +1,24 @@
 {% extends 'includes/layout.html' %}
 
-<!-- <title> -->
-{% block title %} {{ block.super }} {% endblock title %}
-<!-- </title> -->
-
 <!-- <body> -->
 {% block content %}
-
-    <ol class="pl-3">
-      <li class="mb-3">dasdad your logo image inside<code>a.navbar-brand</code></li>
-      <li class="mb-3">You can set the logo width and height by<code>width=""</code>,<code>height=""</code> attributes.</li>
-      <li class="mb-3">Add one of <code>.align-top .align-middle .align-bottom</code> classes to vertically adapt adjacent text with the image.</li>
-    </ol>
-
+    <div class="card border">
+        <div class="card-header">
+            {% if user.is_authenticated %}
+            <h3>Welcome, {{ user.username }}!</h3>
+            {% else %}
+            <h3>Welcome to RobustQ!</h3>
+            {% endif %}
+        </div>
+        <div class="card-body">
+                <p>RobustQ is a service to quantify cellular robustness. Learn more about it <a href="#" class="link text">here</a>.</p>
+            <p>How to get started:</p>
+                <ol class="pl-2">
+                    <li>Submit your job here</li>
+                    <li>Wait for the job to finish. This can take up to 48 hours, depending on the model size.</li>
+                    <li>Once your job is finished, we will notify you via email.</li>
+                </ol>
+        </div>
+    </div>
 {% endblock content %}
 <!-- </body> -->

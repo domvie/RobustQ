@@ -1,0 +1,23 @@
+{% extends 'includes/layout.html' %}
+
+<!-- <title> -->
+{% block title %} Your jobs - RobustQ {% endblock title %}
+<!-- </title> -->
+
+{% load crispy_forms_tags %}
+<!-- <body> -->
+{% block content %}
+    <div class="content-section">
+        <div class="card border">
+            <div class="card-header bg-light">
+                <h3>Job overview for {{ user.username }}</h3>
+            </div>
+            <div class="card-body">
+                Your Jobs appear here.
+                Stuff to add: Job status, date, ...
+            </div>
+        </div>
+    </div>
+
+{% endblock content %}
+<!-- </body> -->

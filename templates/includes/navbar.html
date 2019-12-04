@@ -1,30 +1,39 @@
 <!-- NAVBAR-->
-<header>
-<nav class="navbar navbar-expand-lg py-3 navbar-dark bg-dark shadow-sm">
+<header class="site-header">
+<nav class="navbar navbar-expand-lg py-1 navbar-dark shadow-sm" style="background-color: #464646">
   <div class="container">
-    <a href="#" class="navbar-brand">
-      <!-- Logo Image -->
-        {% load static %}
-        <a href="https://boku.ac.at/" class="navbar-brand">
-            <img src="{% static "img/boku.png" %}" width="45" alt="" class="d-inline-block align-middle mr-2">
-        </a>
-      <!-- Logo Text -->
-        <a href="/"><span class="text-uppercase font-weight-bold navbar-brand">RobustQ</span></a>
-    </a>
+      <div class="row">
+          <!-- Logo Image -->
+            {% load static %}
+          <img src="{% static 'img/network.png' %}" width="45" class="navbar-brand pr-1">
+          <!-- Logo Text -->
+            <div class="navbar-brand p-0">
+                <div class="row h-50 inline-block">
+                    <a href="/"><span class="text-uppercase font-weight-bold navbar-brand pt-1 pb-0">RobustQ</span></a>
+                </div>
+                <div class="row h-50 inline-block">
+                    <span style="font-size:0.7rem;">Quantify cellular robustness</span>
+                </div>
+            </div>
+        </div>
 
     <button type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation" class="navbar-toggler"><span class="navbar-toggler-icon"></span></button>
 
     <div id="navbarSupportedContent" class="collapse navbar-collapse">
       <ul class="navbar-nav ml-auto">
-        <li class="nav-item active"><a href="#" class="nav-link">Home <span class="sr-only">(current)</span></a></li>
-        <li class="nav-item"><a href="#" class="nav-link">Tasks</a></li>
+        <li class="nav-item active"><a href="{% url 'index-home' %}" class="nav-link">Home <span class="sr-only">(current)</span></a></li>
+        <li class="nav-item"><a href="{% url 'jobs' %}" class="nav-link">Your Jobs</a></li>
+        <li class="nav-item"><a href="{% url 'profile' %}" class="nav-link">Profile</a></li>
         <li class="nav-item"><a href="#" class="nav-link">Help</a></li>
         <li class="nav-item"><a href="#" class="nav-link">About</a></li>
-        <li class="nav-item"><a href="#" class="nav-link">Contact</a></li>
           <li class="nav-item">
-        <div class="btn-group" role="group" aria-label="Basic example">
-            <button type="button" class="btn btn-outline-primary text text-light">Login</button>
-            <button type="button" class="btn btn-outline-info"><a href="/register" class="text text-light" style="text-decoration: none">Register</a></button>
+        <div class="btn-group pt-1" role="group" aria-label="Login/Register">
+            {% if user.is_authenticated %}
+                <button type="button" class="btn btn-sm text text-light"><a href="{% url 'logout' %}" class="text text-light" style="text-decoration: none">Logout</a></button>
+            {% else %}
+                <a href="{% url 'login' %}" style="text-decoration: none" class="btn btn-sm btn-outline-secondary text text-light">Login</a>
+                <a href="{% url 'register' %}" style="text-decoration: none" class="btn btn-sm btn-outline-secondary text text-light">Register</a>
+            {% endif %}
         </div>
         </li>
       </ul>

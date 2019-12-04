@@ -1,6 +1,15 @@
 from django.shortcuts import render
-from django.http import HttpResponse
+from django.contrib.auth.decorators import login_required
+from django.core.mail import send_mail
 
 
+@login_required
 def overview(request):
-    return HttpResponse('Overview comes here soon')
+    # send_mail('testsubject',
+    #           'message',
+    #           '',
+    #           ['dominic.viehbock@gmail.com'],
+    #           fail_silently=False,
+    #           )
+    return render(request, 'jobs/overview.html')
+
