@@ -1,0 +1,31 @@
+{% extends 'includes/layout.html' %}
+
+<!-- <title> -->
+{% block title %} New job - RobustQ {% endblock title %}
+<!-- </title> -->
+
+{% load crispy_forms_tags %}
+<!-- <body> -->
+{% block content %}
+    <div class="content-section">
+        <div class="card border">
+            <div class="card-header bg-light p-2">
+                <h3>Job overview for {{ user.username }}</h3>
+            </div>
+            <div class="card-body">
+            <form method="POST" enctype="multipart/form-data">
+                {% csrf_token %}
+                <fieldset class="form-group">
+                        <legend class="border-bottom mb-4">New Job</legend>
+                    {{ form|crispy }}
+                </fieldset>
+                <div class="form-group">
+                    <button class="btn btn-outline-info" type="submit">Submit</button>
+                </div>
+            </form>
+            </div>
+        </div>
+    </div>
+
+{% endblock content %}
+<!-- </body> -->
