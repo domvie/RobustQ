@@ -10,14 +10,38 @@
             <h3>Welcome to RobustQ!</h3>
             {% endif %}
         </div>
-        <div class="card-body">
-                <p>RobustQ is a service to quantify cellular robustness. Learn more about it <a href="#" class="link text">here</a>.</p>
+
+        <div class="card-body p-2">
+
+        <!-- Body when User is logged in -->
+            {% if user.is_authenticated %}
+                {% load crispy_forms_tags %}
+            <p>You currently have <a href="{% url 'jobs' %}">{{ running_jobs.count }} jobs</a> running.</p>
+                <p>You submitted a total of {{ jobs.count }} jobs.</p>
+            <p>Want to queue another job?</p>
+                <div class="container col-6">
+                <form method="POST">
+                    {% csrf_token %}
+                    <fieldset class="form-group">
+                        <legend class="border-bottom mb-4">Start New Job</legend>
+            {{ job_form|crispy }}
+                    </fieldset>
+                <div class="form-group">
+                    <button class="btn btn-outline-info" type="submit">Submit</button>
+                </div>
+            </form>
+
+            {% else %}
+                </div>
+        <!-- Body when User is not logged in -->
+            <p>RobustQ is a service to quantify cellular robustness. Learn more about it <a href="#" class="link text">here</a>.</p>
             <p>How to get started:</p>
-                <ol class="pl-2">
+                <ol class="pl-5">
                     <li>Submit your job here</li>
                     <li>Wait for the job to finish. This can take up to 48 hours, depending on the model size.</li>
-                    <li>Once your job is finished, we will notify you via email.</li>
+                    <li>Once your job is finished, you will receive a notification.</li>
                 </ol>
+            {% endif %}
         </div>
     </div>
 {% endblock content %}

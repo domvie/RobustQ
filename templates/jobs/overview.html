@@ -5,6 +5,8 @@
 <!-- </title> -->
 
 {% load crispy_forms_tags %}
+{% load django_tables2 %}
+
 <!-- <body> -->
 {% block content %}
     <div class="content-section">
@@ -13,8 +15,11 @@
                 <h3>Job overview for {{ user.username }}</h3>
             </div>
             <div class="card-body">
-                Your Jobs appear here.
-                Stuff to add: Job status, date, ...
+                {% if jobs %}
+                {% render_table table %}
+                {% else %}
+                <p>No Jobs submitted!</p>
+                {% endif %}
             </div>
         </div>
     </div>

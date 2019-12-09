@@ -18,6 +18,8 @@ from django.urls import path, include
 from users import views as user_views
 from jobs import views as job_views
 from django.contrib.auth import views as auth_views
+from django.conf import settings
+from django.conf.urls.static import static
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -28,5 +30,7 @@ urlpatterns = [
     path('jobs/', job_views.overview, name='jobs'),
     path('profile/', user_views.profile, name='profile'),
     path('new/', job_views.new, name='new')
-
 ]
+
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

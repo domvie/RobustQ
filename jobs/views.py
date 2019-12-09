@@ -1,15 +1,9 @@
 from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
-from django.core.mail import send_mail
-from .forms import JobSubmissionForm
+from django.contrib.auth.models import User
+from .forms import JobSubmissionForm, JobTable
 from django.contrib import messages
 from .models import Job
-
-@login_required
-def overview(request):
-    jobs = Job.objects.filter(user=request.user)
-    return render(request, 'jobs/overview.html', context={'jobs': jobs})
-
 
 @login_required
 def new(request):
@@ -20,7 +14,6 @@ def new(request):
             extended.user = request.user
             extended.file = request.FILES
             extended.save()
-
         else:
             messages.warning(request, message='Something went wrong')
             print(form)
@@ -28,3 +21,14 @@ def new(request):
             print(form.fields)
             print(form.data)
     return render(request, 'jobs/new.html', context={'form': form})
+
+@login_required
+def overview(request):
+    jobs = request.user.job_set.all()
+    table = JobTable(jobs)
+    running_jobs = jobs.filter(is_finished='False')
+    context = {'jobs': jobs,
+               'running_jobs': running_jobs,
+               'table': table
+               }
+    return render(request, 'jobs/overview.html', context=context)
