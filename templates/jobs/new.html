@@ -13,16 +13,7 @@
                 <h3>Job overview for {{ user.username }}</h3>
             </div>
             <div class="card-body">
-            <form method="POST" enctype="multipart/form-data">
-                {% csrf_token %}
-                <fieldset class="form-group">
-                        <legend class="border-bottom mb-4">New Job</legend>
-                    {{ form|crispy }}
-                </fieldset>
-                <div class="form-group">
-                    <button class="btn btn-outline-info" type="submit">Submit</button>
-                </div>
-            </form>
+                {% include 'includes/new_job_form.html' %}
             </div>
         </div>
     </div>

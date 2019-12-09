@@ -19,20 +19,8 @@
             <p>You currently have <a href="{% url 'jobs' %}">{{ running_jobs.count }} jobs</a> running.</p>
                 <p>You submitted a total of {{ jobs.count }} jobs.</p>
             <p>Want to queue another job?</p>
-                <div class="container col-6">
-                <form method="POST">
-                    {% csrf_token %}
-                    <fieldset class="form-group">
-                        <legend class="border-bottom mb-4">Start New Job</legend>
-            {{ job_form|crispy }}
-                    </fieldset>
-                <div class="form-group">
-                    <button class="btn btn-outline-info" type="submit">Submit</button>
-                </div>
-            </form>
-
+            {% include 'includes/new_job_form.html' %}
             {% else %}
-                </div>
         <!-- Body when User is not logged in -->
             <p>RobustQ is a service to quantify cellular robustness. Learn more about it <a href="#" class="link text">here</a>.</p>
             <p>How to get started:</p>
@@ -42,7 +30,9 @@
                     <li>Once your job is finished, you will receive a notification.</li>
                 </ol>
             {% endif %}
+
         </div>
     </div>
+
 {% endblock content %}
 <!-- </body> -->

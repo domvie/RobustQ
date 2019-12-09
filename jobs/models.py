@@ -12,6 +12,6 @@ class Job(models.Model):
     time_finished = models.DateTimeField(blank=True, null=True)
     ip = models.GenericIPAddressField(null=True)
     status = models.CharField(max_length=20, null=True, blank=True)
-    sbml = models.FileField(upload_to='uploads',
-                            validators=[FileExtensionValidator(allowed_extensions=['sbml', 'xml'],
-                                                               message='Wrong file type!')])
+    sbml_file = models.FileField(upload_to='uploads', name='',
+                                 validators=[FileExtensionValidator(allowed_extensions=['sbml', 'xml'],
+                                                                    message='Wrong file type!')], verbose_name='File')

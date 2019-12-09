@@ -1,2 +1,5 @@
 /venv/
 /RobustQ/local_config.py
+/jobs/migrations/
+*/migrations/
+__pycache__/
