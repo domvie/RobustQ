@@ -7,10 +7,10 @@ import itertools
 from django.core.validators import FileExtensionValidator
 
 
-class JobSubmissionForm(forms.Form):
-    sbml_file = forms.FileField(label='File to upload (SBML):',
-                                validators=[FileExtensionValidator(allowed_extensions=['sbml', 'xml'],
-                                                                   message='Wrong file type!')])
+class JobSubmissionForm(forms.ModelForm):
+    # sbml_file = forms.FileField(label='File to upload (SBML):')
+                                # validators=[FileExtensionValidator(allowed_extensions=['sbml', 'xml'],
+                                #                                    message='Wrong file type!')])
 
     class Meta:
         model = Job
