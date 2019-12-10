@@ -14,6 +14,9 @@
     <title>{% block title %}RobustQ - a web service to quantify cellular robustness{% endblock title %}</title>
 </head>
 <body>
+    <script>
+        var sbml_errors;
+    </script>
     {% include 'includes/navbar.html' %}
 {#    <section class="py-5">#}
     <main role="main" class="container py-5">
@@ -39,18 +42,26 @@
     <script src="{% static 'js/bs-custom-file-input.js' %}"></script>
     <script>
         $(document).ready(function () {
-            bsCustomFileInput.init()
+            bsCustomFileInput.init();
+
+            var form = document.querySelector('form');
+
+            /*$(function () {
+              $('[data-toggle="popover"]').popover({"trigger": "manual", "html": true})
+            });*/
+
+            if(sbml_errors === true) {
+                var errors = `{{  job_form.sbml_file.errors.as_text }}`;
+                errors = errors.split('* ');
+                errors = errors.filter(function(el) {
+                    return el !== "";}
+                    );
+                $('#id_sbml_file').popover({
+                                            content: '<ul class="pl-3 pb-0"><li>' + errors.join('</li><li>') + '</li></ul>',
+                                            html: true
+                }).popover('toggle');
+            }
         });
-        var form = document.querySelector('form');
-
-        $(function () {
-          $('[data-toggle="popover"]').popover({"trigger": "manual", "html":"true"})
-        })
-
-        if(sbml_errors === true) {
-            $('#id_sbml_file').attr('data-content', '{{  job_form.sbml_file.errors.as_text }}').popover('toggle');
-        }
-
     </script>
 </body>
 </html>

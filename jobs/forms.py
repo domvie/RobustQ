@@ -3,13 +3,9 @@ from .models import Job
 import django_tables2 as tables
 from datetime import datetime
 import itertools
-from django.core.validators import FileExtensionValidator
 
 
 class JobSubmissionForm(forms.ModelForm):
-
-    # sbml_file = forms.FileField(label='', validators=[FileExtensionValidator(allowed_extensions=['sbml', 'xml'],
-    #                                                                          message='Wrong file type!')])
 
     class Meta:
         model = Job
@@ -36,19 +32,24 @@ class JobTable(CancelColumn, tables.Table):
 
     def render_start_date(self, value):
         try:
-            return datetime.strftime(value, "%b %d %Y, %H:%m")
+            return datetime.strftime(value, "%b %d %Y, %H:%M")
+        except TypeError as te:
+            return '—'
+
+    def render_submit_date(self, value):
+        try:
+            return datetime.strftime(value, "%b %d %Y, %H:%M")
+        except TypeError as te:
+            return '—'
+
+    def render_time_finished(self, value):
+        try:
+            return datetime.strftime(value, "%b %d %Y, %H:%M")
         except TypeError as te:
             return '—'
 
     def render_id(self):
         return "%d" % next(self.counter)
-
-    # def render_sbml_file(self):
-
-
-    # def render_cancel(self):
-    #     return format_html(f'<a href="#">X</a>')
-
 
     class Meta:
         model = Job

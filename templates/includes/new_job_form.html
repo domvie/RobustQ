@@ -3,6 +3,7 @@
         {% csrf_token %}
             <fieldset class="form-group">
                 <legend class="border-bottom mb-4">Start New Job</legend>
+                    <label for="id_sbml_file_Addon01" class="label">Please upload a valid SBML file (.xml)</label>
                     <div class="input-group">
                       <div class="input-group-prepend">
                         <span class="input-group-text" id="id_sbml_file_Addon01">Upload</span>
@@ -16,7 +17,7 @@
                 <div id="form-errors">
                 {% if job_form.sbml_file.errors %}
                     <script>
-                        var sbml_errors = true;
+                        sbml_errors = true;
                     </script>
                     <noscript>
                     <ul>
