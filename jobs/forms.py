@@ -20,11 +20,7 @@ class JobSubmissionForm(forms.ModelForm):
                                                       'data-content': ''})
 
 
-class CancelColumn(tables.Table):
-    cancel = tables.Column()
-
-
-class JobTable(CancelColumn, tables.Table):
+class JobTable(tables.Table):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -48,8 +44,10 @@ class JobTable(CancelColumn, tables.Table):
         except TypeError as te:
             return '—'
 
-    def render_id(self):
-        return "%d" % next(self.counter)
+    id = tables.LinkColumn('details', args=[tables.utils.A('pk')], text=lambda record: record.pk)
+
+    # def render_id(self, record):
+    #     return '<a href="%s">%d</a>' % (record.pk, next(self.counter))
 
     class Meta:
         model = Job

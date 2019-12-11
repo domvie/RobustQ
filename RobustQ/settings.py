@@ -173,6 +173,7 @@ DJANGO_TABLES2_TEMPLATE = 'django_tables2/bootstrap4.html'
 
 LOGIN_REDIRECT_URL = 'index-home'
 LOGIN_URL = 'login'
+LOGOUT_REDIRECT_URL = 'index-home'
 
 EMAIL_PORT = 25
 EMAIL_HOST = 'localhost'
@@ -186,4 +187,5 @@ MESSAGE_TAGS = {message_constants.DEBUG: 'debug',
                 message_constants.INFO: 'info',
                 message_constants.SUCCESS: 'success',
                 message_constants.WARNING: 'warning',
-                message_constants.ERROR: 'danger',}
+                message_constants.ERROR: 'danger',
+                }

@@ -2,29 +2,31 @@
 
 <!-- <body> -->
 {% block content %}
+
     <div class="card border">
-        <div class="card-header">
-            {% if user.is_authenticated %}
-            <h3>Welcome, {{ user.username }}!</h3>
-            {% else %}
-            <h3>Welcome to RobustQ!</h3>
-            {% endif %}
-        </div>
+        <div class="jumbotron">
+        {% if user.is_authenticated %}
+        <h3>Welcome, {{ user.username }}!</h3>
+        <p>You currently have <a href="{% url 'jobs' %}">{{ running_jobs.count }} jobs</a> running.</p>
+
+        {% else %}
+        <h3>Welcome to RobustQ!</h3>
+            <p>RobustQ is a service to quantify cellular robustness. Learn more about it <a href="#" class="link text">here</a>.</p>
+        {% endif %}
+    </div>
 
         <div class="card-body p-2">
 
-        <!-- Body when User is logged in -->
             {% if user.is_authenticated %}
                 {% load crispy_forms_tags %}
-            <p>You currently have <a href="{% url 'jobs' %}">{{ running_jobs.count }} jobs</a> running.</p>
                 <p>You submitted a total of {{ jobs.count }} jobs.</p>
             <p>Want to queue another job?</p>
             {% include 'includes/new_job_form.html' %}
             {% else %}
-        <!-- Body when User is not logged in -->
-            <p>RobustQ is a service to quantify cellular robustness. Learn more about it <a href="#" class="link text">here</a>.</p>
+
             <p>How to get started:</p>
                 <ol class="pl-5">
+                    <li>Create an account</li>
                     <li>Submit your job here</li>
                     <li>Wait for the job to finish. This can take up to 48 hours, depending on the model size.</li>
                     <li>Once your job is finished, you will receive a notification.</li>

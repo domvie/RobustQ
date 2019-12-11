@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="{% static 'bootstrap/css/bootstrap.css' %}">
     <!-- Footer CSS -->
     <link rel="stylesheet" href="{% static "css/footer.css" %}">
+    <link href="{% static 'fontawesome/css/all.css' %}" rel="stylesheet">
 {#    <link href="https://fonts.googleapis.com/css?family=Roboto&display=swap" rel="stylesheet">#}
 {#    <link rel="stylesheet" href="{% static "css/main.css" %}">#}
     <meta charset="UTF-8">
@@ -58,7 +59,8 @@
                     );
                 $('#id_sbml_file').popover({
                                             content: '<ul class="pl-3 pb-0"><li>' + errors.join('</li><li>') + '</li></ul>',
-                                            html: true
+                                            html: true,
+                                            placement: 'auto',
                 }).popover('toggle');
             }
         });

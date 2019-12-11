@@ -1,36 +1,39 @@
-<div class="container col-6" id="form_id">
-    <form method="POST" enctype="multipart/form-data" novalidate>
-        {% csrf_token %}
-            <fieldset class="form-group">
-                <legend class="border-bottom mb-4">Start New Job</legend>
-                    <label for="id_sbml_file_Addon01" class="label">Please upload a valid SBML file (.xml)</label>
-                    <div class="input-group">
-                      <div class="input-group-prepend">
-                        <span class="input-group-text" id="id_sbml_file_Addon01">Upload</span>
-                      </div>
-                      <div class="custom-file">
-                          {{ job_form.sbml_file }}
-                        <label class="custom-file-label" for="id_sbml_file">Choose file</label>
-                      </div>
-                    </div>
+<div class="container row" id="form_id">
+    <div class="col-12">
+        <form method="POST" enctype="multipart/form-data">
+            {% csrf_token %}
+                <fieldset class="form-group">
+                    <legend class="border-bottom mb-4">Start New Job</legend>
+                        <label for="id_sbml_file_Addon01" class="label">Please upload a valid SBML file (.xml)</label>
+                        <div class="input-group">
+                          <div class="input-group-prepend">
+                            <span class="input-group-text" id="id_sbml_file_Addon01">Upload</span>
+                          </div>
+                          <div class="custom-file">
+                              {{ job_form.sbml_file }}
+                            <label class="custom-file-label" for="id_sbml_file">Choose file</label>
+                          </div>
+                        </div>
 
-                <div id="form-errors">
-                {% if job_form.sbml_file.errors %}
-                    <script>
-                        sbml_errors = true;
-                    </script>
-                    <noscript>
-                    <ul>
-                    {% for error in job_form.sbml_file.errors %}
-                        <li><small class="text text-danger">{{ error|escape }}</small></li>
-                    {% endfor %}
-                    </ul>
-                    </noscript>
-                {% endif %}
-                </div>
-            </fieldset>
-            <div class="form-group">
-            <button class="btn btn-outline-info" type="submit">Submit</button>
-        </div>
-    </form>
+                    {% if job_form.sbml_file.errors %}
+                        <div id="form-errors">
+                            <script>
+                                sbml_errors = true;
+                            </script>
+                            <noscript>
+                            <ul>
+                            {% for error in job_form.sbml_file.errors %}
+                                <li><small class="text text-danger">{{ error|escape }}</small></li>
+                            {% endfor %}
+                            </ul>
+                            </noscript>
+                        </div>
+
+                    {% endif %}
+                </fieldset>
+                <div class="form-group">
+                <button class="btn btn-outline-info" type="submit">Submit</button>
+            </div>
+        </form>
+    </div>
 </div>

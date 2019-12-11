@@ -1,4 +1,4 @@
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
 from .forms import JobSubmissionForm, JobTable
 from django.contrib import messages
@@ -6,14 +6,15 @@ from django.contrib import messages
 
 @login_required
 def new(request):
-    form = JobSubmissionForm(request.POST or None, request.FILES or None)
+    job_form = JobSubmissionForm(request.POST or None, request.FILES or None)
     if request.POST:
-        if form.is_valid():
-            extended = form.save(commit=False)
+        if job_form.is_valid():
+            extended = job_form.save(commit=False)
             extended.user = request.user
             extended.file = request.FILES
             extended.save()
-    return render(request, 'jobs/new.html', context={'form': form})
+            return redirect('overview')
+    return render(request, 'jobs/new.html', context={'job_form': job_form})
 
 
 @login_required
@@ -26,3 +27,9 @@ def overview(request):
                'table': table
                }
     return render(request, 'jobs/overview.html', context=context)
+
+
+@login_required
+def details(request, pk):
+    job = request.user.job_set.get(id=pk)
+    return render(request, 'jobs/details.html', context={'job': job})

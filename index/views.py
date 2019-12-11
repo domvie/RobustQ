@@ -10,16 +10,8 @@ def home(request):
     context = dict()
     if request.user.is_authenticated:
         form = JobSubmissionForm(request.POST or None, request.FILES or None)
-        ctx = {}
-        ctx.update(csrf(request))
-        form_html = render_crispy_form(form, context=ctx)
-        if request.POST:
-            if form.is_valid():
-                extended = form.save(commit=False)
-                extended.user = request.user
-                extended.file = request.FILES
-                extended.save()
-                return redirect('jobs')
+        # ctx = {}
+        # ctx.update(csrf(request))
         jobs = request.user.job_set.all()
         running_jobs = jobs.filter(is_finished='False')
         context.update({
@@ -27,9 +19,14 @@ def home(request):
             'running_jobs': running_jobs,
             'job_form': form,
         })
-        return render(request, 'index/index.html', context=context)
-    else:
-        return render(request, 'index/index.html')  # return this if user is not authenticated
+        if request.POST:
+            if form.is_valid():
+                extended = form.save(commit=False)
+                extended.user = request.user
+                extended.file = request.FILES
+                extended.save()
+                return redirect('jobs')
+    return render(request, 'index/index.html', context=context)
 
 
 def about(request):
