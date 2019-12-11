@@ -1,6 +1,6 @@
 from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
-from .forms import JobSubmissionForm, JobTable
+from .forms import JobSubmissionForm, JobTable, JobDetailTable
 from django.contrib import messages
 
 

@@ -30,7 +30,7 @@ urlpatterns = [
     path('jobs/', job_views.overview, name='jobs'),
     path('profile/', user_views.profile, name='profile'),
     path('jobs/new/', job_views.new, name='new'),
-    path('details/<int:pk>', job_views.details, name='details')
+    path('jobs/details/<int:pk>', job_views.details, name='details')
 ]
 
 if settings.DEBUG:

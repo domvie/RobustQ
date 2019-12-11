@@ -1,6 +1,5 @@
 {% extends 'includes/layout.html' %}
 
-<!-- <body> -->
 {% block content %}
 
     <div class="card border">
@@ -19,12 +18,12 @@
 
             {% if user.is_authenticated %}
                 {% load crispy_forms_tags %}
-                <p>You submitted a total of {{ jobs.count }} jobs.</p>
-            <p>Want to queue another job?</p>
+                <p class="pl-3">You submitted a total of {{ jobs.count }} jobs.</p>
+            <p class="pl-3">Want to queue another job?</p>
             {% include 'includes/new_job_form.html' %}
             {% else %}
 
-            <p>How to get started:</p>
+            <p class="pl-3">How to get started:</p>
                 <ol class="pl-5">
                     <li>Create an account</li>
                     <li>Submit your job here</li>
@@ -37,4 +36,3 @@
     </div>
 
 {% endblock content %}
-<!-- </body> -->

@@ -4,6 +4,11 @@ from django.conf import settings
 
 
 def sbml_validator(value):
+    """
+    Validates the uploaded SBML/XML file using the libSBML library
+    :param value: FileField object
+    :return: FileField object or ValidationError
+    """
     try:
         reader = libsbml.SBMLReader()
         document = reader.readSBML(value.path)
@@ -16,7 +21,7 @@ def sbml_validator(value):
                 line = error.getLine()
                 # severity = error.getSeverityAsString()
                 category = error.getCategoryAsString()
-                errors.append(f'{category} line {line}: {msg}')
+                errors.append(f'{category}/line {line}: {msg}')
             raise ValidationError(message=errors, code='sbml_file_error', params={'error': msg, 'line': line})
         return value
     except TypeError as te:

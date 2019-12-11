@@ -45,14 +45,36 @@ class JobTable(tables.Table):
             return '—'
 
     id = tables.LinkColumn('details', args=[tables.utils.A('pk')], text=lambda record: record.pk)
+    details = tables.TemplateColumn(template_name="jobs/tables/details.html", extra_context={'label': 'Details'},
+                                    verbose_name='')
+
 
     # def render_id(self, record):
     #     return '<a href="%s">%d</a>' % (record.pk, next(self.counter))
 
     class Meta:
         model = Job
-        fields = ['id', 'user', 'submit_date', 'start_date', 'sbml_file', 'status', 'is_finished', 'time_finished']
+        fields = ['id', 'user', 'submit_date', 'start_date', 'sbml_file', 'status', 'is_finished', 'time_finished',
+                  'details']
 
-        row_attrs = {
-            "data-id": lambda record: record.pk
+        attrs = {
+            'class': 'table table-striped table-hover'
         }
+        # row_attrs = {
+        #     "data-id": lambda record: record.pk
+        # }
+
+
+class JobDetailTable(tables.Table):
+
+    cancel = tables.TemplateColumn(template_name="jobs/tables/cancel.html", extra_context={'label': 'Cancel'},
+                                    verbose_name='')
+    delete = tables.TemplateColumn(template_name='jobs/tables/delete.html', extra_context={'label': 'Delete'},
+                                    verbose_name='')
+
+    class Meta:
+        model = Job
+
+    attrs = {
+        'class': 'table table-striped table-hover'
+    }

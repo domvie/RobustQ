@@ -5,9 +5,7 @@
 <!-- </title> -->
 
 {% load crispy_forms_tags %}
-{% load django_tables2 %}
 
-<!-- <body> -->
 {% block content %}
     <div class="content-section">
         <div class="card border">
@@ -18,22 +16,7 @@
                 <a href="{% url 'jobs' %}" class="btn btn-outline-info">Overview <i class="fas fa-list"></i></a>
                 <div class="py-2 pt-3 container">
                     {% if job %}
-                    <table class="table-container table table-bordered">
-                        <tr>
-                            <th>Header 1</th>
-                            <th>Header 1</th>
-                            <th>Cancel/Stop</th>
-                            <th>Delete</th>
-
-                        </tr>
-                        <tr>
-                            <td>{{ job.id }}</td>
-                            <td>{{ job.user.username }}</td>
-                            <td><a href="#">Cancel</a></td>
-                            <td><a href="#">Delete</a></td>
-
-                        </tr>
-                    </table>
+                    <p>Add stuff like delete cancel button all infos etc.</p>
                     {% else %}
                     <p>Could not find specified job!</p>
                     {% endif %}
@@ -43,4 +26,3 @@
     </div>
 
 {% endblock content %}
-<!-- </body> -->
