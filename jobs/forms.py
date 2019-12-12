@@ -28,6 +28,8 @@ class JobTable(tables.Table):
 
     def render_start_date(self, value):
         try:
+            print(value)
+            # TODO check dates?
             return datetime.strftime(value, "%b %d %Y, %H:%M")
         except TypeError as te:
             return '—'
@@ -47,7 +49,6 @@ class JobTable(tables.Table):
     id = tables.LinkColumn('details', args=[tables.utils.A('pk')], text=lambda record: record.pk)
     details = tables.TemplateColumn(template_name="jobs/tables/details.html", extra_context={'label': 'Details'},
                                     verbose_name='')
-
 
     # def render_id(self, record):
     #     return '<a href="%s">%d</a>' % (record.pk, next(self.counter))

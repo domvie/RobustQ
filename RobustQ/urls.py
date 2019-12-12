@@ -27,10 +27,11 @@ urlpatterns = [
     path('register/', user_views.register, name='register'),
     path('login/', auth_views.LoginView.as_view(template_name='users/login.html'), name='login'),
     path('logout/', auth_views.LogoutView.as_view(template_name='users/logout.html'), name='logout'),
-    path('jobs/', job_views.overview, name='jobs'),
+    path('jobs/', job_views.JobOverView.as_view(), name='jobs'),
     path('profile/', user_views.profile, name='profile'),
-    path('jobs/new/', job_views.new, name='new'),
-    path('jobs/details/<int:pk>', job_views.details, name='details')
+    path('jobs/new/', job_views.NewJobView.as_view(), name='new'),
+    path('jobs/details/<int:pk>', job_views.JobDetailView.as_view(), name='details'),
+    path('jobs/delete/<int:pk>', job_views.JobDeleteView.as_view(), name='job-delete')
 ]
 
 if settings.DEBUG:

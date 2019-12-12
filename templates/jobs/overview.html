@@ -18,7 +18,10 @@
                 <a href="{% url 'new' %}" class="btn btn-outline-info">New <i class="fas fa-plus-square"></i></a>
                 <div class="py-2 pt-3 container">
                     {% if jobs %}
+                        <figure>
+                        <figcaption class="figure-caption">Total: {{ jobs.count }}</figcaption>
                     {% render_table table %}
+                        </figure>
                     {% else %}
                     <p>No Jobs submitted!</p>
                     {% endif %}

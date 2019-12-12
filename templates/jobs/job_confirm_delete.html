@@ -1,0 +1,28 @@
+{% extends 'includes/layout.html' %}
+
+<!-- <title> -->
+{% block title %} New job - RobustQ {% endblock title %}
+<!-- </title> -->
+
+{% load crispy_forms_tags %}
+<!-- <body> -->
+{% block content %}
+    <div class="content-section">
+        <div class="card border">
+            <div class="card-header bg-light p-2">
+                <h3>Delete Job</h3>
+            </div>
+            <div class="card-body">
+                <p>Are you sure you want to delete Job #{{ object.id }} submitted on
+                    {{ object.submit_date }}? All data will be deleted.</p>
+                <form class="form-group" method="POST">
+                    {% csrf_token %}
+                    <button class="btn btn-outline-danger" type="submit">Confirm</button>
+                    <a class="btn btn-outline-secondary" href="{% url 'details' object.pk %}">Cancel</a>
+                </form>
+            </div>
+        </div>
+    </div>
+
+{% endblock content %}
+<!-- </body> -->
