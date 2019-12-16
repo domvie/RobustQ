@@ -1,9 +1,11 @@
 from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
-from .forms import JobSubmissionForm, JobTable, JobDetailTable
+from .forms import JobSubmissionForm, JobTable
 from django.views.generic import CreateView, DetailView, ListView, DeleteView
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from .models import Job
+from ipware import get_client_ip
+from django.forms.models import model_to_dict
 
 
 # @login_required
@@ -19,7 +21,7 @@ from .models import Job
 #     return render(request, 'jobs/new.html', context={'job_form': job_form})
 
 
-class NewJobView(LoginRequiredMixin, UserPassesTestMixin, CreateView):
+class NewJobView(LoginRequiredMixin, CreateView):
     model = Job
     template_name = 'jobs/new.html'
     form_class = JobSubmissionForm
@@ -31,12 +33,10 @@ class NewJobView(LoginRequiredMixin, UserPassesTestMixin, CreateView):
         return context
 
     def form_valid(self, form):
+        client_ip, is_routable = get_client_ip(self.request)
         form.instance.user = self.request.user
+        form.instance.ip = client_ip
         return super().form_valid(form)
-
-    def test_func(self):
-        job = self.get_object()
-        return True if self.request.user == job.user else False
 
 
 class JobOverView(LoginRequiredMixin, ListView):
@@ -56,11 +56,18 @@ class JobOverView(LoginRequiredMixin, ListView):
 class JobDetailView(LoginRequiredMixin, UserPassesTestMixin, DetailView):
     model = Job
     template_name = 'jobs/details.html'
-    form_class = JobDetailTable
 
     def test_func(self):
         job = self.get_object()
         return True if self.request.user == job.user else False
+
+    def get_context_data(self, *, object_list=None, **kwargs):
+        context = super().get_context_data(**kwargs)
+        job = model_to_dict(context['object'])
+        job['user'] = self.request.user
+        job.pop('ip')
+        context['job'] = job
+        return context
 
 
 class JobDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteView):

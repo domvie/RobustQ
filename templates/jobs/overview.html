@@ -15,11 +15,11 @@
                                   <h3>Job overview for {{ user.username }}</h3>
             </div>
             <div class="card-body">
-                <a href="{% url 'new' %}" class="btn btn-outline-info">New <i class="fas fa-plus-square"></i></a>
                 <div class="py-2 pt-3 container">
+                <a href="{% url 'new' %}" class="btn btn-sm btn-outline-info">New <i class="fas fa-plus-square"></i></a>
                     {% if jobs %}
                         <figure>
-                        <figcaption class="figure-caption">Total: {{ jobs.count }}</figcaption>
+                        <figcaption class="figure-caption pt-2">Total: {{ jobs.count }}</figcaption>
                     {% render_table table %}
                         </figure>
                     {% else %}

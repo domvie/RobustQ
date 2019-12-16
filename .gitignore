@@ -3,3 +3,10 @@
 /jobs/migrations/
 */migrations/
 __pycache__/
+.idea/
+Makefile
+make.bat
+source/
+static/admin/
+test.xml
+

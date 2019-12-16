@@ -15,7 +15,7 @@ from .models import UserHistory
 #
 # @receiver(post_save, sender=User)
 # def save_job(sender, instance, **kwargs):
-#     print(instance)
+#     instance
 #     instance.Job.save()
 
 

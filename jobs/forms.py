@@ -1,7 +1,7 @@
 from django import forms
 from .models import Job
 import django_tables2 as tables
-from datetime import datetime
+from django.utils import timezone
 import itertools
 
 
@@ -27,22 +27,26 @@ class JobTable(tables.Table):
         self.counter = itertools.count(start=1)
 
     def render_start_date(self, value):
+        if value is None:
+            return '—'
         try:
-            print(value)
-            # TODO check dates?
-            return datetime.strftime(value, "%b %d %Y, %H:%M")
+            return timezone.localtime(value).strftime("%b %d %Y, %H:%M")
         except TypeError as te:
             return '—'
 
     def render_submit_date(self, value):
+        if value is None:
+            return '—'
         try:
-            return datetime.strftime(value, "%b %d %Y, %H:%M")
+            return timezone.localtime(value).strftime("%b %d %Y, %H:%M")
         except TypeError as te:
             return '—'
 
-    def render_time_finished(self, value):
+    def render_finished_date(self, value):
+        if value is None:
+            return '—'
         try:
-            return datetime.strftime(value, "%b %d %Y, %H:%M")
+            return timezone.localtime(value).strftime("%b %d %Y, %H:%M")
         except TypeError as te:
             return '—'
 
@@ -50,32 +54,15 @@ class JobTable(tables.Table):
     details = tables.TemplateColumn(template_name="jobs/tables/details.html", extra_context={'label': 'Details'},
                                     verbose_name='')
 
-    # def render_id(self, record):
-    #     return '<a href="%s">%d</a>' % (record.pk, next(self.counter))
 
     class Meta:
         model = Job
-        fields = ['id', 'user', 'submit_date', 'start_date', 'sbml_file', 'status', 'is_finished', 'time_finished',
+        fields = ['id', 'user', 'submit_date', 'start_date', 'sbml_file', 'status', 'finished_date',
                   'details']
 
         attrs = {
             'class': 'table table-striped table-hover'
         }
         # row_attrs = {
-        #     "data-id": lambda record: record.pk
+        #     "href": lambda record: "jobs/details/"+str(record.pk)
         # }
-
-
-class JobDetailTable(tables.Table):
-
-    cancel = tables.TemplateColumn(template_name="jobs/tables/cancel.html", extra_context={'label': 'Cancel'},
-                                    verbose_name='')
-    delete = tables.TemplateColumn(template_name='jobs/tables/delete.html', extra_context={'label': 'Delete'},
-                                    verbose_name='')
-
-    class Meta:
-        model = Job
-
-    attrs = {
-        'class': 'table table-striped table-hover'
-    }

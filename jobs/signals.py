@@ -2,6 +2,8 @@ from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
 from django.utils import timezone
 from jobs.models import Job
+from .tasks import add, run_training_method
+
 
 # from multiprocessing import Pool
 # from multiprocessing import cpu_count
@@ -47,6 +49,8 @@ def start_job(sender, instance, created, **kwargs):
         print("Start time updated.")
     instance.refresh_from_db()
     print("It is now", instance.start_date)
+    print('Starting celery task')
+    result = run_training_method.delay()
     # try:
         # pool = Pool(processes)
         # threading.Thread(target=thread_func, args=(pool, 7)).start()
