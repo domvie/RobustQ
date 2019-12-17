@@ -49,7 +49,7 @@ INSTALLED_APPS = [
     'crispy_forms',
     'django_tables2',
     'django_celery_results',
-    'rest_framework',
+    # 'rest_framework',
 ]
 
 MIDDLEWARE = [
@@ -194,7 +194,6 @@ MESSAGE_TAGS = {message_constants.DEBUG: 'debug',
 
 CELERY_RESULT_BACKEND = 'django-db'
 CELERY_CACHE_BACKEND = 'django-cache'
-CELERYD_MAX_TASKS_PER_CHILD = 1
 
 REST_FRAMEWORK = {
     # Use Django's standard `django.contrib.auth` permissions,
@@ -202,12 +201,4 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.DjangoModelPermissionsOrAnonReadOnly'
     ]
-}
-
-CELERY_ONCE = {
-    'backend': 'celery_once.backends.File',
-    'settings': {
-        'location': 'tmp/celery_once',
-        'default_timeout': 46
-    }
 }

@@ -10,6 +10,8 @@ def sbml_validator(value):
     :return: FileField object or ValidationError
     """
     print(value.path)
+    print(vars(value.storage))
+    print(value.url)
     try:
         reader = libsbml.SBMLReader()
         document = reader.readSBML(value.path)

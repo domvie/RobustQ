@@ -16,7 +16,8 @@ def start_job(sender, instance, created, **kwargs):
     print("It is now", instance.start_date)
     print('Starting celery task')
     # result = run_training_method.delay()
-    result = add.delay(instance)
+    result = add.delay()
+
 
 @receiver(post_delete, sender=Job)
 def after_delete(sender, instance, **kwargs):
