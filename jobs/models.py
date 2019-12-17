@@ -7,7 +7,7 @@ from django.urls import reverse
 
 
 def user_directory_path(instance, filename):
-    print(vars(instance))
+    print('PATH WILL BE {0}/{1}'.format(instance.user.id, filename))
     # file will be uploaded to MEDIA_ROOT/<user_id>/<filename>
     return '{0}/{1}'.format(instance.user.id, filename)
 

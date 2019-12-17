@@ -5,41 +5,6 @@ from jobs.models import Job
 from .tasks import add, run_training_method
 
 
-# from multiprocessing import Pool
-# from multiprocessing import cpu_count
-# import threading
-# import signal
-#
-# stop_loop = 0
-#
-#
-# def exit_chld(x, y):
-#     global stop_loop
-#     stop_loop = 1
-#
-#
-# signal.signal(signal.SIGINT, exit_chld)
-#
-# processes = cpu_count() - 1
-#
-#
-# def f(x):
-#     print('-' * 20)
-#     print('Running load on CPU(s)')
-#     print('Utilizing %d cores' % processes)
-#     print('-' * 20)
-#
-#     global stop_loop
-#     while not stop_loop:
-#         x * x
-#
-#
-# def thread_func(pool, processes):
-#     print("inside process")
-#     pool.map(f, range(processes))
-#     print("after map")
-
-
 @receiver(post_save, sender=Job)
 def start_job(sender, instance, created, **kwargs):
     print("Start job signal")
@@ -50,18 +15,8 @@ def start_job(sender, instance, created, **kwargs):
     instance.refresh_from_db()
     print("It is now", instance.start_date)
     print('Starting celery task')
-    result = run_training_method.delay()
-    # try:
-        # pool = Pool(processes)
-        # threading.Thread(target=thread_func, args=(pool, 7)).start()
-        #
-        # print("inside thread")
-    #     pass
-    # except KeyboardInterrupt:
-    #     print("caught keyboardinterrupt")
-    #     pool.terminate()
-    #     pool.close()
-    #     pool.join()
+    # result = run_training_method.delay()
+    result = add.delay(instance)
 
 @receiver(post_delete, sender=Job)
 def after_delete(sender, instance, **kwargs):

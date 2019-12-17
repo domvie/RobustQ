@@ -7,22 +7,19 @@ from billiard.pool import Pool
 from multiprocessing import cpu_count
 import time
 import random
+from django.utils import timezone
 
-stop_loop = 0
-
-def exit_chld(x, y):
-    global stop_loop
-    stop_loop = 1
-
-# signal.signal(signal.SIGINT, exit_chld)
 
 def f(x):
-    global stop_loop
-    while not stop_loop:
+    timeout = time.time() + 60
+    while True:
         x * x
+        if time.time() >= timeout:
+            break
+
 
 @app.task
-def add():
+def add(instance):
     processes = cpu_count() - 1
     print('-' * 20)
     print('Running load on CPU(s)')
@@ -37,17 +34,19 @@ def add():
         print("after function")
         pool.close()
         pool.join()
-        pass
-    except KeyboardInterrupt:
-        print("caught keyboardinterrupt")
-        pool.terminate()
-        pool.close()
-        pool.join()
+        finished = timezone.now()
+        instance.finished_date = finished
+        instance.save()
+        return finished
+    except Exception as e:
+        return f'Failed! {e.args[1]}'
 
-@app.task
+@app.task()
 def run_training_method():
     print('Inside task!')
-    result = random.randint(1,10)
+    result = random.randint(3,10)
     print(f'Sleeping for {result}s')
     time.sleep(result)
     return result
+
+

@@ -9,6 +9,7 @@ def sbml_validator(value):
     :param value: FileField object
     :return: FileField object or ValidationError
     """
+    print(value.path)
     try:
         reader = libsbml.SBMLReader()
         document = reader.readSBML(value.path)
@@ -27,3 +28,6 @@ def sbml_validator(value):
     except TypeError as te:
         print(te.args[1])
         return value
+    except Exception as e:
+        print(e.args[1])
+        raise ValidationError(message=e.args[0], code='sbml_validation_exception', params={'error':e.args[1], 'line': '?'})
