@@ -17,6 +17,7 @@ def start_job(sender, instance, created, **kwargs):
     print("Time job started: ", instance.start_date)
     print('Starting celery task')
     # result = run_training_method.delay()
+    sender.objects.filter(id=instance.id).update(status='Running')
     result = add.delay(id=instance.id)
 
 

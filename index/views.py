@@ -5,7 +5,7 @@ from django.contrib import messages
 from crispy_forms.utils import render_crispy_form
 from django.template.context_processors import csrf
 
-
+# TODO class based view
 def home(request):
     context = dict()
     if request.user.is_authenticated:
@@ -25,7 +25,7 @@ def home(request):
                 extended.user = request.user
                 extended.file = request.FILES
                 extended.save()
-                return redirect('jobs')
+                return redirect('details', extended.id)
     return render(request, 'index/index.html', context=context)
 
 

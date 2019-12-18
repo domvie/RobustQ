@@ -6,9 +6,11 @@ from .validators import sbml_validator
 from django.urls import reverse
 import datetime
 
+
 def user_directory_path(instance, filename):
     # file will be uploaded to MEDIA_ROOT/<user_id>/<filename>
-    return '{0}/{1}'.format(instance.user.id, filename)
+    date = datetime.datetime.now().strftime('%d%m%y_%H%M%S')
+    return '{0}/{1}/{2}'.format(instance.user.id, date, filename)
 
 
 def givemetimezone():

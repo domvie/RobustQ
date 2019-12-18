@@ -26,17 +26,19 @@ def add(id):
     print('Running load on CPU(s)')
     print('Utilizing %d cores' % processes)
     print('-' * 20)
+    instance = Job.objects.filter(id=id)
     try:
         pool = Pool(processes)
         # threading.Thread(target=thread_func, args=(pool, 7)).start()
         print("inside process")
+        instance.update(status='Running')
         pool.map(f, range(processes))
         print("after map")
         print("after function")
         pool.close()
         pool.join()
         finished = timezone.now()
-        Job.objects.filter(id=id).update(finished_date=finished, is_finished=True, status='Done')
+        instance.update(finished_date=finished, is_finished=True, status='Done')
         return finished
     except Exception as e:
         return f'Failed! {e.args[1]}'

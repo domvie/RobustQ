@@ -35,7 +35,6 @@ class NewJobView(LoginRequiredMixin, CreateView):
         return context
 
     def form_valid(self, form):
-        print('INSIDE CLASS VIEW FORM VALIDATION')
         client_ip, is_routable = get_client_ip(self.request)
         form.instance.user = self.request.user
         form.instance.ip = client_ip

@@ -57,10 +57,9 @@ class JobTable(tables.Table):
     details = tables.TemplateColumn(template_name="jobs/tables/details.html", extra_context={'label': 'Details'},
                                     verbose_name='')
 
-
     class Meta:
         model = Job
-        fields = ['id', 'user', 'submit_date', 'start_date', 'sbml_file', 'status', 'finished_date',
+        fields = ['id', 'user', 'start_date', 'sbml_file', 'status', 'finished_date',
                   'details']
 
         attrs = {
