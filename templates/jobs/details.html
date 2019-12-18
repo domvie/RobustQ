@@ -24,8 +24,10 @@
                             </div>
                         {% endfor %}
                         </ul>
+                        {% if not job.is_finished %}
                         <a href="#" class="btn btn-sm btn-outline-warning">Cancel</a>
-                        <a href="job_confirm_delete.html" class="btn btn-sm btn-outline-danger">Delete</a>
+                        {% endif %}
+                        <a href="{% url 'job-delete' job.id %}" class="btn btn-sm btn-outline-danger">Delete</a>
 
                     {% else %}
                     <p>Could not find specified job!</p>
