@@ -7,16 +7,17 @@ from .tasks import add, run_training_method
 
 @receiver(post_save, sender=Job)
 def start_job(sender, instance, created, **kwargs):
-    print("Start job signal")
+    print("Start job signal received")
     if created:
-        instance.start_date = timezone.localtime(timezone.now())
-        instance.save(update_fields=['start_date'])
-        print("Start time updated.")
+        # instance.start_date = timezone.localtime(timezone.now())
+        sender.objects.filter(id=instance.id).update(start_date=timezone.now())
+        # alternatively: post_save.disconnect(..)
+        # instance.save(update_fields=['start_date'])
     instance.refresh_from_db()
-    print("It is now", instance.start_date)
+    print("Time job started: ", instance.start_date)
     print('Starting celery task')
     # result = run_training_method.delay()
-    result = add.delay()
+    result = add.delay(id=instance.id)
 
 
 @receiver(post_delete, sender=Job)

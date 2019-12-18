@@ -12,6 +12,8 @@ from django.forms.models import model_to_dict
 # def new(request):
 #     job_form = JobSubmissionForm(request.POST or None, request.FILES or None)
 #     if request.POST:
+#         print('INSIDE FUNC(POST)')
+#         print(request.FILES['file'])
 #         if job_form.is_valid():
 #             extended = job_form.save(commit=False)
 #             extended.user = request.user
@@ -33,6 +35,7 @@ class NewJobView(LoginRequiredMixin, CreateView):
         return context
 
     def form_valid(self, form):
+        print('INSIDE CLASS VIEW FORM VALIDATION')
         client_ip, is_routable = get_client_ip(self.request)
         form.instance.user = self.request.user
         form.instance.ip = client_ip

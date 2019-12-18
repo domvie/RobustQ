@@ -1,4 +1,5 @@
 from celery import Celery
+from .models import Job
 
 app = Celery('tasks', broker='amqp://localhost//')
 
@@ -19,7 +20,7 @@ def f(x):
 
 
 @app.task
-def add(instance):
+def add(id):
     processes = cpu_count() - 1
     print('-' * 20)
     print('Running load on CPU(s)')
@@ -35,8 +36,7 @@ def add(instance):
         pool.close()
         pool.join()
         finished = timezone.now()
-        instance.finished_date = finished
-        instance.save()
+        Job.objects.filter(id=id).update(finished_date=finished, is_finished=True, status='Done')
         return finished
     except Exception as e:
         return f'Failed! {e.args[1]}'

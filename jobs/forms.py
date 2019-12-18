@@ -3,10 +3,13 @@ from .models import Job
 import django_tables2 as tables
 from django.utils import timezone
 import itertools
-
+from .models import user_directory_path, FileExtensionValidator
+from .validators import sbml_validator
 
 class JobSubmissionForm(forms.ModelForm):
 
+    # sbml_file = forms.FileField(validators=[FileExtensionValidator(allowed_extensions=['sbml', 'xml'],
+    #                                                                 message='Wrong file type!'), sbml_validator])
     class Meta:
         model = Job
         fields = ['sbml_file']
@@ -61,7 +64,7 @@ class JobTable(tables.Table):
                   'details']
 
         attrs = {
-            'class': 'table table-striped table-hover'
+            'class': 'table table-sm table-striped table-hover'
         }
         # row_attrs = {
         #     "href": lambda record: "jobs/details/"+str(record.pk)

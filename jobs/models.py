@@ -4,11 +4,9 @@ from django.contrib.auth.models import User
 from django.core.validators import FileExtensionValidator
 from .validators import sbml_validator
 from django.urls import reverse
-
+import datetime
 
 def user_directory_path(instance, filename):
-    print('inside path func')
-    print('PATH WILL BE {0}/{1}'.format(instance.user.id, filename))
     # file will be uploaded to MEDIA_ROOT/<user_id>/<filename>
     return '{0}/{1}'.format(instance.user.id, filename)
 
@@ -24,11 +22,11 @@ class Job(models.Model):
     is_finished = models.BooleanField(default=False)
     finished_date = models.DateTimeField(blank=True, null=True)
     ip = models.GenericIPAddressField(null=True)
-    status = models.CharField(max_length=20, null=True, blank=True)
+    status = models.CharField(max_length=20, null=True, default='Queued')
     sbml_file = models.FileField(upload_to=user_directory_path,
                                  validators=[FileExtensionValidator(allowed_extensions=['sbml', 'xml'],
-                                                                    message='Wrong file type!'),
-                                             sbml_validator], verbose_name='File')
+                                                                    message='Wrong file type!'), sbml_validator],
+                                 verbose_name='File')
 
     def get_absolute_url(self):
-        return reverse('details', kwargs={'pk': self.pk}) # returns to e.g. jobs//details/1
+        return reverse('details', kwargs={'pk': self.pk})  # returns to e.g. jobs//details/1
