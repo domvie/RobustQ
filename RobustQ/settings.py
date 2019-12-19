@@ -181,6 +181,8 @@ MESSAGE_TAGS = {message_constants.DEBUG: 'debug',
                 message_constants.ERROR: 'danger',
                 }
 
+# CELERY STUFF
+CELERY_BROKER_URL = 'amqp://localhost//'
 CELERY_RESULT_BACKEND = 'django-db'
 CELERY_CACHE_BACKEND = 'django-cache'
 

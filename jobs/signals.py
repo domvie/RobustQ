@@ -2,8 +2,8 @@ from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
 from django.utils import timezone
 from jobs.models import Job
-from .tasks import add, run_training_method
-
+from .tasks import add, run_training_method, cancel_add
+import time
 
 @receiver(post_save, sender=Job)
 def start_job(sender, instance, created, **kwargs):
@@ -19,6 +19,8 @@ def start_job(sender, instance, created, **kwargs):
     # result = run_training_method.delay()
     sender.objects.filter(id=instance.id).update(status='Running')
     result = add.delay(id=instance.id)
+    print(result.status)
+    print(result.ready())
 
 
 @receiver(post_delete, sender=Job)
