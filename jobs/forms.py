@@ -6,6 +6,7 @@ import itertools
 from .models import user_directory_path, FileExtensionValidator
 from .validators import sbml_validator
 
+
 class JobSubmissionForm(forms.ModelForm):
 
     # sbml_file = forms.FileField(validators=[FileExtensionValidator(allowed_extensions=['sbml', 'xml'],

@@ -18,14 +18,44 @@
                     {% if job %}
                         <ul class="list-group list-group-flush py-1">
                         {% for key, value in job.items %}
-                            <div class="d-inline-flex">
-                                <li class="list-group-item list-group-item-info col-2">{{ key|upper }}</li>
-                                <li class="list-group-item list-group-item-light col-10"> {{ value }}</li>
+                            <div class="d-sm-inline-flex flex-sm-row align-item-sm-center">
+                                <li class="list-group-item list-group-item-info col-sm-2">{{ key|upper }}</li>
+                                <li class="list-group-item list-group-item-light col-sm-10"> {{ value }}</li>
                             </div>
                         {% endfor %}
                         </ul>
-                        {% if not job.is_finished %}
-                        <a href="#" class="btn btn-sm btn-outline-warning">Cancel</a>
+                        {% if tasks %}
+                            <p class="h4">Task details</p>
+                            <ul class="list-group list-group-flush py-1">
+                            {% for task in tasks %}
+
+                                    {% for key, value in task.items %}
+                                        {% if key == 'task_result' %}
+
+                                            {% for k, v in value.items %}
+                                                <div class="d-inline-flex">
+                                            <li class="list-group-item list-group-item-info col-sm-2">{{ k|upper }}</li>
+                                            <li class="list-group-item list-group-item-light col-sm-10"> {{ v }}</li>
+                                                </div>
+                                            {% endfor %}
+
+                                        {% else %}
+
+                                        <div class="d-inline-flex">
+                                    <li class="list-group-item list-group-item-info col-sm-2">{{ key|upper }}</li>
+                                    <li class="list-group-item list-group-item-light col-sm-10"> {{ value }}</li>
+                                        </div>
+
+                                        {% endif %}
+                                    {% endfor %}
+                                <br>
+                                        <p>Task</p>
+
+                            {% endfor %}
+                            </ul>
+                            {% endif %}
+                            {% if not job.is_finished %}
+                            <a href="#" class="btn btn-sm btn-outline-warning">Cancel</a>
                         {% endif %}
                         <a href="{% url 'job-delete' job.id %}" class="btn btn-sm btn-outline-danger">Delete</a>
 

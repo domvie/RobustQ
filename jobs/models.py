@@ -5,6 +5,7 @@ from django.core.validators import FileExtensionValidator
 from .validators import sbml_validator
 from django.urls import reverse
 import datetime
+from django_celery_results.models import TaskResult
 
 
 def user_directory_path(instance, filename):
@@ -32,3 +33,13 @@ class Job(models.Model):
 
     def get_absolute_url(self):
         return reverse('details', kwargs={'pk': self.pk})  # returns to e.g. jobs//details/1
+
+
+class SubTask(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    job = models.ForeignKey(Job, on_delete=models.CASCADE)
+    task_result = models.OneToOneField(TaskResult, on_delete=models.CASCADE, null=True)
+    task_id = models.CharField(max_length=50, null=False, unique=True)
+    status_task = models.CharField(max_length=20, default='Not started')
+    name = models.CharField(max_length=20, null=True)
+

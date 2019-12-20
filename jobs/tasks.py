@@ -1,7 +1,7 @@
 from __future__ import absolute_import, unicode_literals
-from celery import shared_task, Task
+from celery import shared_task
 from .models import Job
-
+from RobustQ.celery import app
 # app = Celery('tasks', backend='rpc://', broker='amqp://localhost//')
 
 # from multiprocessing import Pool
@@ -10,6 +10,7 @@ from multiprocessing import cpu_count
 import time
 import random
 from django.utils import timezone
+import subprocess
 
 
 def f(x):
@@ -39,7 +40,7 @@ def add(id):
     instance = Job.objects.filter(id=id)
 
     try:
-        pool = get_pool()
+        pool = Pool(processes)
         # threading.Thread(target=thread_func, args=(pool, 7)).start()
         print("inside process")
         instance.update(status='Running')
@@ -54,6 +55,7 @@ def add(id):
         return finished
     except Exception as e:
         return f'Failed! {e.args[1]}'
+
 
 @shared_task
 def cancel_add():
@@ -73,19 +75,29 @@ def run_training_method():
     return result
 
 
-class RobustQProcess:
+@app.task(name='cpu_test_one')
+def cpu_test(id):
+    name = 'cpu_test_one'
+    # job = Job.objects.filter(id=id)
+    cpu = subprocess.Popen("bin/cpu_fun")
+    cpu.wait()
+    return cpu.returncode
 
-    ignore_result = True
 
-    def __init__(self, instance_id):
-        self.processes = cpu_count()-1
-        self.pool = Pool(self.processes)
-        self.instance = Job.objects.filter(id=instance_id)
+@app.task(name='cpu_test_two')
+def cpu_test_two(result=None, id=None):
+    print('inside cpu task 2')
+    print(f'result of 1 was {result}')
+    # job = Job.objects.filter(id=id)
+    cpu = subprocess.Popen("bin/cpu_fun")
+    cpu.wait()
+    return cpu.returncode
 
-    def task(self):
-        self.result = add.delay(3)
-        return self.result
-        # return self.pool.map_async(self.task, range(self.processes))
 
-    def stop_task(self):
-        self.pool.terminate()
+@shared_task
+def cpu_test_long(id):
+    print('ID:', id)
+    job = Job.objects.get(id=id)
+    cpu = subprocess.Popen("bin/cpu_fun")
+    cpu.wait()
+    print('Finished with subprocess')

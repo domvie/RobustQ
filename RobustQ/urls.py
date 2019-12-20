@@ -73,9 +73,14 @@ urlpatterns = [
     path('jobs/new/', job_views.NewJobView.as_view(), name='new'),
     path('jobs/details/<int:pk>', job_views.JobDetailView.as_view(), name='details'),
     path('jobs/delete/<int:pk>', job_views.JobDeleteView.as_view(), name='job-delete'),
-    # url(r'^api/', include(router.urls)),
-    # url(r'^api-auth/', include('rest_framework.urls', namespace='api'))
+    path('jobs/cancel/<int:pk>', job_views.cancel_job, name='cancel'),
+    url(r'^api/', include(router.urls)),
+    url(r'^api-auth/', include('rest_framework.urls', namespace='api')),
 ]
 
 if settings.DEBUG:
+    import debug_toolbar
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+    urlpatterns = [
+        path('__debug__/', include(debug_toolbar.urls)),
+    ] + urlpatterns

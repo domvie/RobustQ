@@ -6,6 +6,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from .models import Job
 from ipware import get_client_ip
 from django.forms.models import model_to_dict
+from django.http import HttpResponse, HttpResponseForbidden, JsonResponse
 
 
 # @login_required
@@ -38,7 +39,6 @@ class NewJobView(LoginRequiredMixin, CreateView):
         client_ip, is_routable = get_client_ip(self.request)
         form.instance.user = self.request.user
         form.instance.ip = client_ip
-        print(form)
         return super().form_valid(form)
 
 
@@ -66,10 +66,25 @@ class JobDetailView(LoginRequiredMixin, UserPassesTestMixin, DetailView):
 
     def get_context_data(self, *, object_list=None, **kwargs):
         context = super().get_context_data(**kwargs)
-        job = model_to_dict(context['object'])
-        job['user'] = self.request.user
-        job.pop('ip')
-        context['job'] = job
+        job = context['object']
+        job_dict = model_to_dict(job)
+        job_dict['user'] = self.request.user
+        job_dict.pop('ip')
+        context['job'] = job_dict
+        subtasks = job.subtask_set.all()
+        if subtasks:
+            context['tasks'] = [model_to_dict(t) for t in subtasks]
+            for d in context['tasks']:
+                d.pop('id')
+                d.pop('user')
+                d.pop('job')
+                if d['task_result']:
+                    d.update(('task_result', model_to_dict(task.task_result, fields=['status', 'name'])) for task in subtasks)
+                    # d['task_result']['task_name'] = d['task_result']['task_name'].split('.')[-1]
+
+                # else:
+                #     d['task_result'] = {'status':'No result yet.'}
+
         return context
 
 
@@ -99,3 +114,14 @@ class JobDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteView):
 # def details(request, pk):
 #     job = request.user.job_set.get(id=pk)
 #     return render(request, 'jobs/details.html', context={'job': job})
+
+@login_required
+def cancel_job(request, pk):
+    job = Job.objects.get(id=pk)
+
+    if not request.user == job.user:
+        return HttpResponseForbidden
+    if job.is_finished:
+        return redirect('index-home')
+    # json = serialize('json', {'job': pk})
+    return JsonResponse(model_to_dict(job))

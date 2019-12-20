@@ -28,5 +28,5 @@ def sbml_validator(value):
     #     print(te.args)
     #     return value
     except Exception as e:
-        print(e.args)
-        raise ValidationError(message=e.args[0], code='sbml_validation_exception', params={'error':e.args[0], 'line': '?'})
+        raise ValidationError(message=e.args[0], code='sbml_validation_exception',
+                              params={'error':e.args[0], 'line': '?'})
