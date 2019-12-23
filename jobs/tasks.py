@@ -75,7 +75,7 @@ def run_training_method():
     return result
 
 
-@app.task(name='cpu_test_one')
+@shared_task
 def cpu_test(id):
     name = 'cpu_test_one'
     # job = Job.objects.filter(id=id)
@@ -84,7 +84,7 @@ def cpu_test(id):
     return cpu.returncode
 
 
-@app.task(name='cpu_test_two')
+@shared_task
 def cpu_test_two(result=None, id=None):
     print('inside cpu task 2')
     print(f'result of 1 was {result}')

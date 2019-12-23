@@ -4,7 +4,7 @@ from django.utils import timezone
 from jobs.models import Job, SubTask
 from .tasks import add, run_training_method, cancel_add, cpu_test, cpu_test_two
 from django_celery_results.models import TaskResult
-from celery.signals import task_postrun, after_task_publish, task_prerun
+from celery.signals import task_postrun, after_task_publish, task_prerun, task_failure
 from celery import chain
 from celery.result import AsyncResult
 
@@ -27,7 +27,6 @@ def start_job(sender, instance, created, **kwargs):
         parents.append(copy.parent)
         copy = copy.parent
         # TODO check names
-    print(parents)
     for parent in parents:
         SubTask.objects.create(job=instance, user=instance.user, task_id=parent.id, status_task=parent.status,
                                name=parent.name)
@@ -36,8 +35,11 @@ def start_job(sender, instance, created, **kwargs):
 @receiver(post_save, sender=TaskResult)
 def add_task_info(sender, instance, created, **kwargs):
     task = SubTask.objects.filter(task_id=instance.task_id)
+    celery_result = sender.objects.get(task_id=instance.task_id)
     if task:
-        task.update(task_result=instance)
+        name = celery_result.task_name.split('.')[-1]
+        date = celery_result.date_done
+        task.update(task_result=instance, name=name)
         task = task.get()
         Job.objects.filter(id=task.job_id).update(status='Step 2')
 
@@ -79,3 +81,9 @@ def task_prerun_handler(sender=None, task_id=None, task=None, *args, **kwargs):
     print(f'PRERUN handler for {task_id}, {task}, sender {sender}')
     task = SubTask.objects.filter(task_id=task_id)
     task.update(status_task='STARTED')
+
+
+@task_failure.connect
+def task_failure_handler(sender=None, task_id=None, exception=None, *args, **kwargs):
+    task = SubTask.objects.filter(task_id=task_id)  # returns QuerySet
+    task.update(status_task='FAILURE')

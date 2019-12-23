@@ -7,6 +7,7 @@ from .models import Job
 from ipware import get_client_ip
 from django.forms.models import model_to_dict
 from django.http import HttpResponse, HttpResponseForbidden, JsonResponse
+from django_celery_results.models import TaskResult
 
 
 # @login_required
@@ -73,17 +74,26 @@ class JobDetailView(LoginRequiredMixin, UserPassesTestMixin, DetailView):
         context['job'] = job_dict
         subtasks = job.subtask_set.all()
         if subtasks:
+            # TODO also/rather get TaskResults?
+
             context['tasks'] = [model_to_dict(t) for t in subtasks]
             for d in context['tasks']:
                 d.pop('id')
                 d.pop('user')
                 d.pop('job')
-                if d['task_result']:
-                    d.update(('task_result', model_to_dict(task.task_result, fields=['status', 'name'])) for task in subtasks)
+                # if d.get('task_result'):
+                #     d.update(('task_result', model_to_dict(task.task_result, fields=['status', 'name'])) for task in subtasks)
                     # d['task_result']['task_name'] = d['task_result']['task_name'].split('.')[-1]
 
                 # else:
                 #     d['task_result'] = {'status':'No result yet.'}
+                try:
+                    taskresult = TaskResult.objects.get(task_id=d['task_id'])
+                    d['task_result'] = model_to_dict(taskresult, fields=['task_name', 'status'])
+                    d['task_result']['task_name'] = d['task_result']['task_name'].split('.')[-1]
+                    d['task_result']['date_done'] = taskresult.date_done.strftime("%b %d %Y, %H:%M")
+                except Exception as e:
+                    raise e
 
         return context
 
