@@ -28,8 +28,8 @@ def start_job(sender, instance, created, **kwargs):
         copy = copy.parent
         # TODO check names
     for parent in parents:
-        SubTask.objects.create(job=instance, user=instance.user, task_id=parent.id, status_task=parent.status,
-                               name=parent.name)
+        SubTask.objects.create(job=instance, user=instance.user, task_id=parent.id)
+                               #status_task=parent.status, name=parent.name)
 
 
 @receiver(post_save, sender=TaskResult)
@@ -39,7 +39,7 @@ def add_task_info(sender, instance, created, **kwargs):
     if task:
         name = celery_result.task_name.split('.')[-1]
         date = celery_result.date_done
-        task.update(task_result=instance, name=name)
+        task.update(task_result=instance) # , name=name)
         task = task.get()
         Job.objects.filter(id=task.job_id).update(status='Step 2')
 
@@ -64,14 +64,14 @@ def task_publish_handler(sender=None, headers=None, body=None, **kwargs):
         info=info,
     ))
     task = SubTask.objects.filter(task_id=info[id])
-    task.update(status_task='RECEIVED')
+    # task.update(status_task='RECEIVED')
 
 
 @task_postrun.connect
 def task_postrun_handler(sender, task_id, task, retval, state, *args,  **kwargs):
     print(f'{task_id} exited with status {state}')
     task = SubTask.objects.filter(task_id=task_id)  # returns QuerySet
-    task.update(status_task=state)
+    # task.update(status_task=state)
     job = Job.objects.filter(id=task.get().job_id)
     job.update(is_finished=True)
 
@@ -80,10 +80,10 @@ def task_postrun_handler(sender, task_id, task, retval, state, *args,  **kwargs)
 def task_prerun_handler(sender=None, task_id=None, task=None, *args, **kwargs):
     print(f'PRERUN handler for {task_id}, {task}, sender {sender}')
     task = SubTask.objects.filter(task_id=task_id)
-    task.update(status_task='STARTED')
+    # task.update(status_task='STARTED')
 
 
 @task_failure.connect
 def task_failure_handler(sender=None, task_id=None, exception=None, *args, **kwargs):
     task = SubTask.objects.filter(task_id=task_id)  # returns QuerySet
-    task.update(status_task='FAILURE')
+    # task.update(status_task='FAILURE')

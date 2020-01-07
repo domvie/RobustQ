@@ -3,7 +3,7 @@ from django.contrib.auth.decorators import login_required
 from .forms import JobSubmissionForm, JobTable
 from django.views.generic import CreateView, DetailView, ListView, DeleteView
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
-from .models import Job
+from .models import Job, SubTask
 from ipware import get_client_ip
 from django.forms.models import model_to_dict
 from django.http import HttpResponse, HttpResponseForbidden, JsonResponse
@@ -93,7 +93,9 @@ class JobDetailView(LoginRequiredMixin, UserPassesTestMixin, DetailView):
                     d['task_result']['task_name'] = d['task_result']['task_name'].split('.')[-1]
                     d['task_result']['date_done'] = taskresult.date_done.strftime("%b %d %Y, %H:%M")
                 except Exception as e:
-                    raise e
+                    taskresult = SubTask.objects.get(task_id=d['task_id'])
+                    d['task_result'] = model_to_dict(taskresult)
+                    # raise e
 
         return context
 
