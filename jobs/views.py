@@ -75,9 +75,10 @@ class JobDetailView(LoginRequiredMixin, UserPassesTestMixin, DetailView):
         subtasks = job.subtask_set.all()
         if subtasks:
             # TODO also/rather get TaskResults?
-
+            print(subtasks)
             context['tasks'] = [model_to_dict(t) for t in subtasks]
             for d in context['tasks']:
+                print(d)
                 d.pop('id')
                 d.pop('user')
                 d.pop('job')

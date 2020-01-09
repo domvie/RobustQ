@@ -42,5 +42,5 @@ class SubTask(models.Model):
     task_result = models.OneToOneField(TaskResult, on_delete=models.CASCADE, null=True)
     task_id = models.CharField(max_length=50, null=False, unique=True)
     # status_task = models.CharField(max_length=20, default='Not started')
-    # name = models.CharField(max_length=20, null=True)
+    name = models.CharField(max_length=20, null=True)
 
