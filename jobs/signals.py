@@ -28,7 +28,7 @@ def start_job(sender, instance, created, **kwargs):
         copy = copy.parent
         # TODO check names
     for parent in parents:
-        SubTask.objects.create(job=instance, user=instance.user, task_id=parent.id, name=parent.name)
+        SubTask.objects.create(job=instance, user=instance.user, task_id=parent.id)
 
 
 @receiver(post_save, sender=TaskResult)
@@ -38,7 +38,7 @@ def add_task_info(sender, instance, created, **kwargs):
     if task:
         name = celery_result.task_name.split('.')[-1]
         date = celery_result.date_done
-        task.update(task_result=instance, name=name)
+        task.update(task_result=instance) # , name=name)
         task = task.get()
         Job.objects.filter(id=task.job_id).update(status='Step 2')
 
