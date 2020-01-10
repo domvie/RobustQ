@@ -1,5 +1,6 @@
 from django.core.validators import ValidationError
 import libsbml
+from django.db.models.fields.files import FieldFile, FileField
 from django.conf import settings
 
 
@@ -11,7 +12,16 @@ def sbml_validator(value):
     """
     try:
         reader = libsbml.SBMLReader()
-        document = reader.readSBML(value.name)
+        if isinstance(value, FileField):
+            print('FileField True, value.name=', value.name)
+            document = reader.readSBML(value.name)
+        elif isinstance(value, FieldFile):
+            print('FieldFile value.name=', value.name)
+            document = reader.readSBML(value.name)
+        else:
+            print(type(value))
+            document = reader.readSBML(value.name)
+
         nr_errors = document.getNumErrors()
         if nr_errors:
             errors = []
@@ -28,5 +38,9 @@ def sbml_validator(value):
     #     print(te.args)
     #     return value
     except Exception as e:
+        print(value)
+        print(vars(value))
+        print(value.path, vars(value.storage))
+        print(e.args)
         raise ValidationError(message=e.args[0], code='sbml_validation_exception',
                               params={'error':e.args[0], 'line': '?'})

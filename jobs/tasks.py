@@ -1,9 +1,7 @@
 from __future__ import absolute_import, unicode_literals
 from celery import shared_task
-from .models import Job
+from .models import Job, SubTask
 from RobustQ.celery import app
-# app = Celery('tasks', backend='rpc://', broker='amqp://localhost//')
-
 # from multiprocessing import Pool
 from billiard.pool import Pool
 from multiprocessing import cpu_count
@@ -11,86 +9,40 @@ import time
 import random
 from django.utils import timezone
 import subprocess
+from celery.utils.log import get_task_logger
 
 
-def f(x):
-    timeout = time.time() + 60
-    while True:
-        x * x
-        if time.time() >= timeout:
-            break
-
-pool = None
-
-@shared_task
-def get_pool():
-    global pool
-    if pool is None:
-        pool = Pool(cpu_count() - 1)
-    return pool
+def log_subprocess_output(pipe, logger=None):
+    for line in iter(pipe.readline, b''): # b'\n'-separated lines
+        logger.info('%r', line)
 
 
-@shared_task
-def add(id):
-    processes = cpu_count() - 1
-    print('-' * 20)
-    print('Running load on CPU(s)')
-    print('Utilizing %d cores' % processes)
-    print('-' * 20)
-    instance = Job.objects.filter(id=id)
-
-    try:
-        pool = Pool(processes)
-        # threading.Thread(target=thread_func, args=(pool, 7)).start()
-        print("inside process")
-        instance.update(status='Running')
-        # return pool.map_async(f, range(processes))
-        pool.map(f, range(processes))
-        print("after map")
-        print("after function")
-        pool.close()
-        pool.join()
-        finished = timezone.now()
-        instance.update(finished_date=finished, is_finished=True, status='Done')
-        return finished
-    except Exception as e:
-        return f'Failed! {e.args[1]}'
-
-
-@shared_task
-def cancel_add():
-    pool = get_pool()
-    print('canceling process pool')
-    pool.terminate()
-    pool.close()
-    pool.join()
-
-
-@shared_task()
-def run_training_method():
-    print('Inside task!')
-    result = random.randint(3,10)
-    print(f'Sleeping for {result}s')
-    time.sleep(result)
-    return result
-
-
-@shared_task
-def cpu_test(id):
-    name = 'cpu_test_one'
-    # job = Job.objects.filter(id=id)
-    cpu = subprocess.Popen("bin/cpu_fun")
+@shared_task(bind=True, name='cpu_test_one')
+def cpu_test(self, *args, **kwargs):
+    logger = get_task_logger(self.request.id)
+    logger.info(f'Task {self.request.task} started with args={args}, kwargs={kwargs}. Job ID = {self.request.kwargs}')
+    cpu = subprocess.Popen("bin/cpu_fun", stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    with cpu.stdout:
+        log_subprocess_output(cpu.stdout, logger=logger)
     cpu.wait()
+    # stdout = cpu.communicate()[0]
+    # logger.info(stdout)
     return cpu.returncode
 
 
-@shared_task
-def cpu_test_two(result=None, id=None):
+@shared_task(bind=True, name='cpu_test_two')
+def cpu_test_two(self, result=None, *args, **kwargs):
     print('inside cpu task 2')
-    print(f'result of 1 was {result}')
-    # job = Job.objects.filter(id=id)
-    cpu = subprocess.Popen("bin/cpu_fun")
+    logger = get_task_logger(self.request.id)
+    logger.info(f'Result of previous task was {result}')
+    logger.info(f'Task {self.request.task} started with args={args}, kwargs={kwargs}. Job ID = {self.request.kwargs}')
+    cpu = subprocess.Popen("bin/cpu_fun", stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    with cpu.stdout:
+        log_subprocess_output(cpu.stdout, logger=logger)
     cpu.wait()
+    # stdout = cpu.communicate()[0]
+    # logger.info(stdout)
+    # job = Job.objects.filter(id=id)
     return cpu.returncode
 
 
