@@ -64,8 +64,9 @@ class JobTable(tables.Table):
                   'details']
 
         attrs = {
-            'class': 'table table-sm table-striped table-hover'
+            'class': 'table table-sm table-striped table-hover',
         }
+        order_by = "-id"
         # row_attrs = {
         #     "href": lambda record: "jobs/details/"+str(record.pk)
         # }

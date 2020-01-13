@@ -14,7 +14,7 @@ from celery.utils.log import get_task_logger
 
 def log_subprocess_output(pipe, logger=None):
     for line in iter(pipe.readline, b''): # b'\n'-separated lines
-        logger.info('%r', line)
+        logger.info('%r', line.decode('utf-8'))
 
 
 @shared_task(bind=True, name='cpu_test_one')
@@ -53,3 +53,12 @@ def cpu_test_long(id):
     cpu = subprocess.Popen("bin/cpu_fun")
     cpu.wait()
     print('Finished with subprocess')
+
+
+from celery.contrib import rdb # debugger
+
+
+@shared_task(bind=True)
+def update_db_post_run(self, result=None, job_id=None, *args, **kwargs):
+    job = Job.objects.filter(id=job_id)
+    job.update(is_finished=True, finished_date=timezone.now(), status="Done", result=result)

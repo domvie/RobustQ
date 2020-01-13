@@ -9,6 +9,7 @@ from django.forms.models import model_to_dict
 from django.http import HttpResponse, HttpResponseForbidden, JsonResponse
 from django_celery_results.models import TaskResult
 from celery.result import AsyncResult
+from django_tables2.views import SingleTableView
 
 
 # @login_required
@@ -44,18 +45,23 @@ class NewJobView(LoginRequiredMixin, CreateView):
         return super().form_valid(form)
 
 
-class JobOverView(LoginRequiredMixin, ListView):
+class JobOverView(LoginRequiredMixin, SingleTableView, ListView):
+    # paginate_by = 10
     model = Job
     template_name = 'jobs/overview.html'
     form_class = JobTable
+    table_class = JobTable
 
     def get_context_data(self, *, object_list=None, **kwargs):
         context = super().get_context_data(**kwargs)
         jobs = self.request.user.job_set.all()
-        context['table'] = JobTable(jobs)
+        self.table = JobTable(jobs)
+        # table.paginate(self.request.GET.get("page", 1), per_page=25)
+        # context['table'] = self.table
         context['running_jobs'] = jobs.filter(is_finished='False')
         context['jobs'] = jobs
         return context
+
 
 
 class JobDetailView(LoginRequiredMixin, UserPassesTestMixin, DetailView):
@@ -75,7 +81,6 @@ class JobDetailView(LoginRequiredMixin, UserPassesTestMixin, DetailView):
         context['job'] = job_dict
         subtasks = job.subtask_set.all()
         if subtasks:
-            # TODO also/rather get TaskResults?
             context['tasks'] = [model_to_dict(t) for t in subtasks]
             for d in context['tasks']:
                 print(d)
@@ -90,7 +95,7 @@ class JobDetailView(LoginRequiredMixin, UserPassesTestMixin, DetailView):
                 #     d['task_result'] = {'status':'No result yet.'}
                 try:
                     taskresult = TaskResult.objects.get(task_id=d['task_id'])
-                    d['task_result'] = model_to_dict(taskresult, fields=['status'])
+                    d['task_result'] = model_to_dict(taskresult, fields=['status', 'result'])
                     d['task_result']['date_done'] = taskresult.date_done.strftime("%b %d %Y, %H:%M")
                 except Exception as e:
                     task = AsyncResult(d['task_id'])

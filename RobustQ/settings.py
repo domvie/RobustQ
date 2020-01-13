@@ -201,3 +201,5 @@ REST_FRAMEWORK = {
         'rest_framework.permissions.DjangoModelPermissionsOrAnonReadOnly'
     ]
 }
+
+MAX_UPLOAD_SIZE = 5242880 # = 50MB
