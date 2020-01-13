@@ -19,8 +19,8 @@
                         <ul class="list-group list-group-flush py-1">
                         {% for key, value in job.items %}
                             <div class="d-sm-inline-flex flex-sm-row align-item-sm-center">
-                                <li class="list-group-item list-group-item-info col-sm-2">{{ key|upper }}</li>
-                                <li class="list-group-item list-group-item-light col-sm-10"> {{ value }}</li>
+                                <li class="list-group-item list-group-item-info col-sm-3">{{ key|upper }}</li>
+                                <li class="list-group-item list-group-item-light col-sm-9"> {{ value }}</li>
                             </div>
                         {% endfor %}
                         </ul>
@@ -34,16 +34,16 @@
 
                                             {% for k, v in value.items %}
                                                 <div class="d-inline-flex">
-                                            <li class="list-group-item list-group-item-info col-sm-2">{{ k|upper }}</li>
-                                            <li class="list-group-item list-group-item-light col-sm-10"> {{ v }}</li>
+                                            <li class="list-group-item list-group-item-info col-sm-3">{{ k|upper }}</li>
+                                            <li class="list-group-item list-group-item-light col-sm-9"> {{ v }}</li>
                                                 </div>
                                             {% endfor %}
 
                                         {% else %}
 
                                         <div class="d-inline-flex">
-                                    <li class="list-group-item list-group-item-info col-sm-2">{{ key|upper }}</li>
-                                    <li class="list-group-item list-group-item-light col-sm-10"> {{ value }}</li>
+                                    <li class="list-group-item list-group-item-info col-sm-3">{{ key|upper }}</li>
+                                    <li class="list-group-item list-group-item-light col-sm-9"> {{ value }}</li>
                                         </div>
 
                                         {% endif %}

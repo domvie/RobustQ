@@ -63,7 +63,6 @@ class JobOverView(LoginRequiredMixin, SingleTableView, ListView):
         return context
 
 
-
 class JobDetailView(LoginRequiredMixin, UserPassesTestMixin, DetailView):
     model = Job
     template_name = 'jobs/details.html'
@@ -83,7 +82,6 @@ class JobDetailView(LoginRequiredMixin, UserPassesTestMixin, DetailView):
         if subtasks:
             context['tasks'] = [model_to_dict(t) for t in subtasks]
             for d in context['tasks']:
-                print(d)
                 d.pop('id')
                 d.pop('user')
                 d.pop('job')
@@ -96,6 +94,7 @@ class JobDetailView(LoginRequiredMixin, UserPassesTestMixin, DetailView):
                 try:
                     taskresult = TaskResult.objects.get(task_id=d['task_id'])
                     d['task_result'] = model_to_dict(taskresult, fields=['status', 'result'])
+                    d['task_result']['result'] = taskresult.result
                     d['task_result']['date_done'] = taskresult.date_done.strftime("%b %d %Y, %H:%M")
                 except Exception as e:
                     task = AsyncResult(d['task_id'])
