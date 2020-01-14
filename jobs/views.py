@@ -10,7 +10,8 @@ from django.http import HttpResponse, HttpResponseForbidden, JsonResponse
 from django_celery_results.models import TaskResult
 from celery.result import AsyncResult
 from django_tables2.views import SingleTableView
-
+from django.conf import settings
+from django.template.defaultfilters import filesizeformat
 
 # @login_required
 # def new(request):
@@ -36,6 +37,7 @@ class NewJobView(LoginRequiredMixin, CreateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['job_form'] = context['form']
+        context['max_upload'] = filesizeformat(settings.MAX_UPLOAD_SIZE)
         return context
 
     def form_valid(self, form):

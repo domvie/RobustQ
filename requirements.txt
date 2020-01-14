@@ -1,5 +1,11 @@
 celery
 django
-sudo apt install apache2 mariadb-server libmariadbclient-dev php libapache2-mod-php php-mysql python3-dev pip3
+sudo apt install apache2 mariadb-server libmariadbclient-dev php libapache2-mod-php php-mysql python3-dev pip3 rabbitmq-server
 
 pip3 install virtualenv django jinja2 requests python-libsbml mysqlclient
+
+
+For Pipeline:
+C libs: CPLEX
+
+Perl modules: Math::Fraction, Math::MatrixFraction + autosplix

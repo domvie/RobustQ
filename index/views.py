@@ -4,6 +4,9 @@ from jobs.forms import JobSubmissionForm
 from django.contrib import messages
 from crispy_forms.utils import render_crispy_form
 from django.template.context_processors import csrf
+from django.conf import settings
+from django.template.defaultfilters import filesizeformat
+
 
 # TODO class based view
 def home(request):
@@ -18,6 +21,7 @@ def home(request):
             'jobs': jobs,
             'running_jobs': running_jobs,
             'job_form': form,
+            'max_upload': filesizeformat(settings.MAX_UPLOAD_SIZE)
         })
         if request.POST:
             if form.is_valid():

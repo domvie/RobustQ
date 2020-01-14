@@ -10,6 +10,10 @@ from celery.result import AsyncResult
 import os
 from celery.utils.log import get_task_logger
 import logging
+from time import time
+import datetime
+
+timer = {}
 
 
 @receiver(post_save, sender=Job)
@@ -65,12 +69,12 @@ def task_publish_handler(sender=None, headers=None, body=None, **kwargs):
 @task_prerun.connect
 def task_prerun_handler(sender=None, task_id=None, task=None, *args, **kwargs):
     print(f'PRERUN handler setting up logging for {task_id}, {task}, sender {sender}')
+    timer[task_id] = time()
     job_id = kwargs['kwargs']['job_id']
     job = Job.objects.filter(id=job_id)
     job.update(status="Started")
     job = job.get()
-    user = job.user
-    SubTask.objects.create(job=job, user=user, task_id=task_id, name=task.name)
+    SubTask.objects.create(job=job, user=job.user, task_id=task_id, name=task.name)
 
     fpath = job.sbml_file.path
     path = os.path.dirname(fpath)
@@ -94,11 +98,16 @@ def task_prerun_handler(sender=None, task_id=None, task=None, *args, **kwargs):
 @task_postrun.connect
 def task_postrun_handler(sender, task_id, task, retval, state, *args,  **kwargs):
     print(f'{task_id} exited with status {state}')
+    try:
+        cost = time() - timer.pop(task_id)
+    except KeyError:
+        cost = -1
     # task = SubTask.objects.filter(task_id=task_id)  # returns QuerySet
     # job = Job.objects.filter(id=task.get().job_id)
     # job.update(is_finished=True)
     # getting the same logger created in prerun handler and closilogging.getLoggerng all handles associated with it
     logger = get_task_logger(task_id)
+    logger.info("%s ran for %s", task.__name__, str(datetime.timedelta(seconds=cost)))
     logger.info(f'Task {task_id} finished with state {state} and returned {retval}')
     for handler in logger.handlers:
         handler.flush()
