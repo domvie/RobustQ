@@ -2,7 +2,7 @@ from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
 from django.utils import timezone
 from jobs.models import Job, SubTask
-from .tasks import cpu_test, cpu_test_two, update_db_post_run
+from .tasks import cpu_test, cpu_test_two, update_db_post_run, sbml_processing, compress_network, create_dual_system
 from django_celery_results.models import TaskResult
 from celery.signals import task_postrun, after_task_publish, task_prerun, task_failure
 from celery import chain
@@ -12,6 +12,7 @@ from celery.utils.log import get_task_logger
 import logging
 from time import time
 import datetime
+import sys
 
 timer = {}
 
@@ -26,9 +27,14 @@ def start_job(sender, instance, created, **kwargs):
     # instance.refresh_from_db()
     # result = run_training_method.delay()
     sender.objects.filter(id=instance.id).update(status='Queued')
-    result = chain(cpu_test.s(),
-                   cpu_test_two.s(job_id=instance.id),
-                   update_db_post_run.s(job_id=instance.id)).apply_async(kwargs={'job_id':instance.id})
+    # result = chain(cpu_test.s(),
+    #                cpu_test_two.s(job_id=instance.id),
+    #                update_db_post_run.s(job_id=instance.id)).apply_async(kwargs={'job_id':instance.id})
+
+    result = chain(sbml_processing.s(job_id=instance.id),
+                   compress_network.s(job_id=instance.id),
+                   update_db_post_run.s(job_id=instance.id),
+                   create_dual_system.s(job_id=instance.id)).apply_async(kwargs={'job_id':instance.id})
 
     parents = list()
     parents.append(result)
@@ -59,9 +65,9 @@ def task_publish_handler(sender=None, headers=None, body=None, **kwargs):
     # information about task are located in headers for task messages
     # using the task protocol version 2.
     info = headers if 'task' in headers else body
-    print('after task publish for task id {info[id]}'.format(
-        info=info,
-    ))
+    # print('after task publish for task id {info[id]}'.format(
+    #     info=info,
+    # ))
     # task = SubTask.objects.filter(task_id=info[id])
     # task.update(status_task='RECEIVED')
 
@@ -82,13 +88,15 @@ def task_prerun_handler(sender=None, task_id=None, task=None, *args, **kwargs):
     logger = get_task_logger(task_id)#logging.getLogger(task_id)
     formatter = logging.Formatter('[%(asctime)s][%(levelname)s] %(message)s')
     # optionally logging on the Console as well as file
-    stream_handler = logging.StreamHandler()
+    stream_handler = logging.StreamHandler(sys.stdout)
     stream_handler.setFormatter(formatter)
     stream_handler.setLevel(logging.INFO)
     # Adding File Handle with file path. Filename is task_id
     task_handler = logging.FileHandler(os.path.join(path, task.name+'.log'))
     task_handler.setFormatter(formatter)
     task_handler.setLevel(logging.INFO)
+    # h = logging.StreamHandler(sys.stdout)
+    # logger.addHandler(h)
     logger.addHandler(stream_handler)
     logger.addHandler(task_handler)
     logger.info(f'Starting task id {task_id} for task {task.name}')
@@ -117,7 +125,7 @@ def task_postrun_handler(sender, task_id, task, retval, state, *args,  **kwargs)
 
 @task_failure.connect
 def task_failure_handler(sender=None, task_id=None, exception=None, *args, **kwargs):
-    task = SubTask.objects.filter(task_id=task_id)  # returns QuerySet
+    task = SubTask.objects.filter(task_id=task_id).get()
     job = Job.objects.filter(id=task.job.id)
     job.update(status="Failure")
     logger = get_task_logger(task_id)
