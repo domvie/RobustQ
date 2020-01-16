@@ -14,6 +14,7 @@ import sys
 import os
 from shutil import copyfile
 import logging
+import numpy as np
 
 BASE_DIR = os.getcwd()
 
@@ -29,7 +30,7 @@ def setup_process(self, result, job_id, *args, **kwargs):
     # Logging
     logger = get_task_logger(self.request.id)
     app.log.redirect_stdouts_to_logger(logger, loglevel=logging.INFO)
-    logger.info(f'Result of previous task was {result}')
+    logger.info(f'Result/returncode of previous task was {result}')
     logger.info(f'Task {self.request.task} started with args={args}, kwargs={kwargs}. Job ID = {job_id}')
 
     # Filepath extractions
@@ -79,7 +80,6 @@ def update_db_post_run(self, result=None, job_id=None, *args, **kwargs):
 @shared_task(bind=True, name="SBML_processing")
 def sbml_processing(self, job_id=None, *args, **kwargs):
     """ """
-    import numpy as np
     import cobra
     from cobra.flux_analysis.variability import find_blocked_reactions
     # import cobra.manipulation
@@ -290,7 +290,7 @@ def defigueiredo(self, result, job_id, *args, **kwargs):
 
 
 @shared_task(bind=True, name="mcs_to_binary")
-def mcs_to_binary(self, job_id, *args, **kwargs):
+def mcs_to_binary(self, result, job_id, *args, **kwargs):
     """ """
     logger, fpath, path, fname, model_name, extension = setup_process(self, job_id=job_id, result=result, *args,
                                                                       **kwargs)
@@ -327,7 +327,7 @@ def mcs_to_binary(self, job_id, *args, **kwargs):
 
 
 @shared_task(bind=True, name="PoFcalc")
-def pofcalc(self, job_id, *args, **kwargs):
+def pofcalc(self, result, job_id, *args, **kwargs):
     """ """
     logger, fpath, path, fname, model_name, extension = setup_process(self, job_id=job_id, result=result, *args,
                                                                       **kwargs)
