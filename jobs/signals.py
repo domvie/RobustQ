@@ -9,7 +9,9 @@ from .tasks import \
     sbml_processing, \
     compress_network, \
     create_dual_system, \
-    defigueiredo
+    defigueiredo, \
+    mcs_to_binary, \
+    pofcalc
 from django_celery_results.models import TaskResult
 from celery.signals import task_postrun, after_task_publish, task_prerun, task_failure
 from celery import chain
@@ -42,6 +44,8 @@ def start_job(sender, instance, created, **kwargs):
                    compress_network.s(job_id=instance.id),
                    create_dual_system.s(job_id=instance.id),
                    defigueiredo.s(job_id=instance.id),
+                   mcs_to_binary.s(job_id=instance.id),
+                   pofcalc.s(job_id=instance.id),
                    update_db_post_run.s(job_id=instance.id),
                    ).apply_async(kwargs={'job_id':instance.id})
 
