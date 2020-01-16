@@ -2,7 +2,14 @@ from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
 from django.utils import timezone
 from jobs.models import Job, SubTask
-from .tasks import cpu_test, cpu_test_two, update_db_post_run, sbml_processing, compress_network, create_dual_system
+from .tasks import \
+    cpu_test, \
+    cpu_test_two, \
+    update_db_post_run, \
+    sbml_processing, \
+    compress_network, \
+    create_dual_system, \
+    defigueiredo
 from django_celery_results.models import TaskResult
 from celery.signals import task_postrun, after_task_publish, task_prerun, task_failure
 from celery import chain
@@ -33,8 +40,10 @@ def start_job(sender, instance, created, **kwargs):
 
     result = chain(sbml_processing.s(job_id=instance.id),
                    compress_network.s(job_id=instance.id),
+                   create_dual_system.s(job_id=instance.id),
+                   defigueiredo.s(job_id=instance.id),
                    update_db_post_run.s(job_id=instance.id),
-                   create_dual_system.s(job_id=instance.id)).apply_async(kwargs={'job_id':instance.id})
+                   ).apply_async(kwargs={'job_id':instance.id})
 
     parents = list()
     parents.append(result)

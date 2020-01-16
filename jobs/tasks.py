@@ -171,7 +171,7 @@ def compress_network(self, result, job_id, *args, **kwargs):
     logger, fpath, path, fname, model_name, extension = setup_process(self, job_id=job_id, result=result, *args,
                                                                       **kwargs)
 
-    # change to new WD
+    # change WD to folder containing the model and files etc. (upload folder)
     os.chdir(path)
 
     # call the script process
@@ -186,7 +186,7 @@ def compress_network(self, result, job_id, *args, **kwargs):
                                          '-l',
                                          '-k',
                                          ]
-    logger.info(f'Starting network compression script with the following parameters: {cmd_args}')
+    logger.info(f'Starting network compression script with the following arguments: {" ".join(cmd_args)}')
     try:
         compress_process = subprocess.Popen(cmd_args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         with compress_process.stdout:
@@ -201,7 +201,6 @@ def compress_network(self, result, job_id, *args, **kwargs):
     copyfile(os.path.join(path, f'{model_name}.nfile'), os.path.join(path, f'{model_name}.tfile_comp'))
 
     os.chdir(BASE_DIR)
-
     return compress_process.returncode
 
 
@@ -211,6 +210,9 @@ def create_dual_system(self, result, job_id, *args, **kwargs):
 
     logger, fpath, path, fname, model_name, extension = setup_process(self, job_id=job_id, result=result, *args,
                                                                       **kwargs)
+
+    # change WD to folder containing the model and files etc. (upload folder)
+    os.chdir(path)
 
     # write inputs to file
     filetypes = ['r', 'm', 's', 'rv', 't']
@@ -226,6 +228,8 @@ def create_dual_system(self, result, job_id, *args, **kwargs):
 
     # Start the process
     try:
+        logger.info(f'Starting {self.request.task} with the following arguments: {" ".join(cmd_args)}')
+
         create_dual_system_process = subprocess.Popen(cmd_args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
 
         with create_dual_system_process.stdout:
@@ -236,11 +240,132 @@ def create_dual_system(self, result, job_id, *args, **kwargs):
         logger.error(repr(e))
         raise e
 
+    os.chdir(BASE_DIR)
+    return create_dual_system_process.returncode
+
 
 @shared_task(bind=True, name="defigueiredo")
 def defigueiredo(self, result, job_id, *args, **kwargs):
     """ """
 
-    pass
+    logger, fpath, path, fname, model_name, extension = setup_process(self, job_id=job_id, result=result, *args,
+                                                                      **kwargs)
+
+    # cardinality - set as parameter?
+    dm = 3
+    # threads - parameter?
+    t = 5
+
+    logger.info(f'Getting MCS: using up to d={dm} and t={t} thread(s)')
+    os.chdir(path)
+    cmd_args = [os.path.join(BASE_DIR, 'bin/defigueiredo'),
+                                         '-m', f'{model_name}_comp_dual.mfile',
+                                         '-r', f'{model_name}_comp_dual.rfile',
+                                         '-s', f'{model_name}_comp_dual.sfile',
+                                         '-v', f'{model_name}_comp_dual.vfile',
+                                         '-c', f'{model_name}_comp_dual.cfile',
+                                         '-x', f'{model_name}_comp_dual.xfile',
+                                         '-o', f'{model_name}.mcs.comp',
+                                         '-t', f'{t}',
+                                         '-u', f'{dm}',
+                                         '-p',
+                                         '-i'
+                ]
+    # Start the process
+    try:
+        logger.info(f'Starting {self.request.task} with the following arguments: {" ".join(cmd_args)}')
+
+        defigueiredo_process = subprocess.Popen(cmd_args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+
+        with defigueiredo_process.stdout:
+            log_subprocess_output(defigueiredo_process.stdout, logger=logger)
+        defigueiredo_process.wait()
+
+    except Exception as e:
+        logger.error(repr(e))
+        raise e
+
+    os.chdir(BASE_DIR)
+    return defigueiredo_process.returncode
 
 
+@shared_task(bind=True, name="mcs_to_binary")
+def mcs_to_binary(self, job_id, *args, **kwargs):
+    """ """
+    logger, fpath, path, fname, model_name, extension = setup_process(self, job_id=job_id, result=result, *args,
+                                                                      **kwargs)
+
+    os.chdir(path)
+    logger.info(f'Transforming compressed MCS to binary representation')
+    mcs_fname = f'{model_name}.mcs.comp'
+    rxns_fname = f'{model_name}.rfile_comp'
+    output_file = f'{model_name}.mcs.comp.binary'
+
+    try:
+        with open(os.path.join(path, rxns_fname), 'r') as f:
+            rxns = f.read().strip().split()
+            rxns = [r.replace('"', '') for r in rxns]
+        f.close()
+
+        with open(os.path.join(path, mcs_fname), 'r') as mcsfile, \
+                open(os.path.join(path, output_file), 'w') as outfile:
+            for line in mcsfile:
+                arr = ['0'] * len(rxns)
+                sep = ' ' if ' ' in line else ','
+                mcs = line.strip().split(sep)
+                for rxn in mcs:
+                    arr[rxns.index(rxn)] = '1'
+                outfile.write(''.join(arr) + '\n')
+        outfile.close()
+        logger.info(f'Successfully read {mcs_fname} and {rxns_fname} and wrote output to {output_file}')
+
+    except Exception as e:
+        logger.error(repr(e))
+        raise e
+
+    os.chdir(BASE_DIR)
+
+
+@shared_task(bind=True, name="PoFcalc")
+def pofcalc(self, job_id, *args, **kwargs):
+    """ """
+    logger, fpath, path, fname, model_name, extension = setup_process(self, job_id=job_id, result=result, *args,
+                                                                      **kwargs)
+
+    os.chdir(path)
+    d = 3  # TODO parameterize
+    t = 5
+    logger.info(f'Calculating PoF up to d={d}')
+
+    infile = f'{model_name}.rfile_comp'
+    outfile = f'{model_name}.num_comp_rxns'
+
+    rxn = np.genfromtxt(os.path.join(path, infile), dtype=str)
+    rxn_cnt = np.char.count(rxn, '%') + 1
+
+    np.savetxt(os.path.join(path, outfile), rxn_cnt.reshape(1, -1), fmt='%g', delimiter=' ')
+
+    cmd_args = [os.path.join(BASE_DIR, 'bin/PoFcalc'),
+                                         '-m', f'{model_name}.mcs.comp.binary',
+                                         '-c', f'{model_name}.num_comp_rxns',
+                                         '-r', "$(awk '{print NF}'", f'{model_name}.rfile',
+                                         '-o', f'{model_name}.mcs.comp',
+                                         '-d', f'{d}',
+                                         '-t', f'{t}'
+                ]
+    # Start the process
+    try:
+        logger.info(f'Starting {self.request.task} with the following arguments: {" ".join(cmd_args)}')
+
+        pofcalc_process = subprocess.Popen(cmd_args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+
+        with pofcalc_process.stdout:
+            log_subprocess_output(pofcalc_process.stdout, logger=logger)
+        pofcalc_process.wait()
+        logger.info(f'Finished!')
+    except Exception as e:
+        logger.error(repr(e))
+        raise e
+
+    os.chdir(BASE_DIR)
+    return pofcalc_process.returncode
