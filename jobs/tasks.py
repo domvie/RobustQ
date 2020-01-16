@@ -218,7 +218,7 @@ def create_dual_system(self, result, job_id, *args, **kwargs):
     filetypes = ['r', 'm', 's', 'rv', 't']
     with open(os.path.join(path, f'{model_name}.inp'), 'w') as f:
         for type in filetypes:
-            f.write(f'{model_name}.{type}file_comp')
+            f.write(f'{model_name}.{type}file_comp\n')
     f.close()
 
     cmd_args = [os.path.join(BASE_DIR, 'scripts/create_ccds_files.pl'),

@@ -97,19 +97,24 @@ def task_prerun_handler(sender=None, task_id=None, task=None, *args, **kwargs):
 
     fpath = job.sbml_file.path
     path = os.path.dirname(fpath)
-
-    logger = get_task_logger(task_id)#logging.getLogger(task_id)
+    path_logs = os.path.join(path, 'logs')
+    if not os.path.exists(path_logs):
+        os.mkdir(path_logs)
+    # Set up logging for each task individually
+    logger = get_task_logger(task_id) #logging.getLogger(task_id)
+    logger.propagate = False
     formatter = logging.Formatter('[%(asctime)s][%(levelname)s] %(message)s')
+
     # optionally logging on the Console as well as file
     stream_handler = logging.StreamHandler(sys.stdout)
     stream_handler.setFormatter(formatter)
     stream_handler.setLevel(logging.INFO)
+
     # Adding File Handle with file path. Filename is task_id
-    task_handler = logging.FileHandler(os.path.join(path, task.name+'.log'))
+    task_handler = logging.FileHandler(os.path.join(path_logs, task.name+'.log'))
     task_handler.setFormatter(formatter)
     task_handler.setLevel(logging.INFO)
-    # h = logging.StreamHandler(sys.stdout)
-    # logger.addHandler(h)
+
     logger.addHandler(stream_handler)
     logger.addHandler(task_handler)
     logger.info(f'Starting task id {task_id} for task {task.name}')
