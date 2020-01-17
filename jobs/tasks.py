@@ -218,7 +218,10 @@ def create_dual_system(self, result, job_id, *args, **kwargs):
     filetypes = ['r', 'm', 's', 'rv', 't']
     with open(os.path.join(path, f'{model_name}.inp'), 'w') as f:
         for type in filetypes:
-            f.write(f'{model_name}.{type}file_comp\n')
+            if type != "t":
+                f.write(f'{model_name}.{type}file_comp,')
+            else:
+                f.write(f'{model_name}.{type}file_comp')
     f.close()
 
     cmd_args = [os.path.join(BASE_DIR, 'scripts/create_ccds_files.pl'),
@@ -252,9 +255,9 @@ def defigueiredo(self, result, job_id, *args, **kwargs):
                                                                       **kwargs)
 
     # cardinality - set as parameter?
-    dm = 3
+    dm = 2
     # threads - parameter?
-    t = 5
+    t = 2
 
     logger.info(f'Getting MCS: using up to d={dm} and t={t} thread(s)')
     os.chdir(path)
@@ -335,8 +338,8 @@ def pofcalc(self, result, job_id, *args, **kwargs):
     os.chdir(path)
     d = 3  # TODO parameterize
     t = 5
-    logger.info(f'Calculating PoF up to d={d}')
 
+    logger.info(f'Transforming compressed MCS to binary representation')
     infile = f'{model_name}.rfile_comp'
     outfile = f'{model_name}.num_comp_rxns'
 
@@ -345,10 +348,12 @@ def pofcalc(self, result, job_id, *args, **kwargs):
 
     np.savetxt(os.path.join(path, outfile), rxn_cnt.reshape(1, -1), fmt='%g', delimiter=' ')
 
+    logger.info(f'Calculating PoF up to d={d}')
+
     cmd_args = [os.path.join(BASE_DIR, 'bin/PoFcalc'),
                                          '-m', f'{model_name}.mcs.comp.binary',
                                          '-c', f'{model_name}.num_comp_rxns',
-                                         '-r', "$(awk '{print NF}'", f'{model_name}.rfile',
+                                         '-r', "$(awk '{print NF}'", f'{model_name}.rfile)', # TODO wrong
                                          '-o', f'{model_name}.mcs.comp',
                                          '-d', f'{d}',
                                          '-t', f'{t}'
