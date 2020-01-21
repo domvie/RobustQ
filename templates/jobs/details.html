@@ -3,10 +3,12 @@
 <!-- <title> -->
 {% block title %} Your job - RobustQ {% endblock title %}
 <!-- </title> -->
-
+{% load static %}
 {% load crispy_forms_tags %}
-
 {% block content %}
+    <script>
+        var job_id = {{ job.id }};
+    </script>
     <div class="content-section">
         <div class="card border">
             <div class="card-header bg-light">
@@ -53,7 +55,7 @@
                             </ul>
                             {% endif %}
                             {% if not job.is_finished %}
-                            <a href="#" class="btn btn-sm btn-outline-warning">Cancel</a>
+                            <a id="cancel_btn" class="btn btn-sm btn-outline-warning">Cancel</a>
                         {% endif %}
                         <a href="{% url 'job-delete' job.id %}" class="btn btn-sm btn-outline-danger">Delete</a>
 
@@ -64,5 +66,4 @@
             </div>
         </div>
     </div>
-
 {% endblock content %}

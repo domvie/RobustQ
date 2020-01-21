@@ -2,7 +2,7 @@ $(document).ready(function () {
     bsCustomFileInput.init();
 
     var form = document.querySelector('form');
-
+    
     /*$(function () {
       $('[data-toggle="popover"]').popover({"trigger": "manual", "html": true})
     });*/

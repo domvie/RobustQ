@@ -16,6 +16,14 @@ from shutil import copyfile
 import logging
 import numpy as np
 
+current_task = dict()
+
+
+def get_current_task():
+    global current_task
+    return current_task
+
+
 BASE_DIR = os.getcwd()
 
 
@@ -26,6 +34,9 @@ def log_subprocess_output(pipe, logger=None):
 
 def setup_process(self, result, job_id, *args, **kwargs):
     """ Basic setup for most tasks. Configures task based logger and filepath variables """
+    global current_task
+    current_task["task_id"] = self.request.id
+    print(current_task)
 
     # Logging
     logger = get_task_logger(self.request.id)
@@ -39,36 +50,7 @@ def setup_process(self, result, job_id, *args, **kwargs):
     fname = os.path.basename(fpath)
     model_name, extension = os.path.splitext(fname)
 
-    return (logger, fpath, path, fname, model_name, extension)
-
-
-@shared_task(bind=True, name='cpu_test_one')
-def cpu_test(self, *args, **kwargs):
-    logger = get_task_logger(self.request.id)
-    logger.info(f'Task {self.request.task} started with args={args}, kwargs={kwargs}. Job ID = {self.request.kwargs}')
-    cpu = subprocess.Popen("bin/cpu_fun", stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-    with cpu.stdout:
-        log_subprocess_output(cpu.stdout, logger=logger)
-    cpu.wait()
-    # stdout = cpu.communicate()[0]
-    # logger.info(stdout)
-    return cpu.returncode
-
-
-@shared_task(bind=True, name='cpu_test_two')
-def cpu_test_two(self, result=None, *args, **kwargs):
-    print('inside cpu task 2')
-    logger = get_task_logger(self.request.id)
-    logger.info(f'Result of previous task was {result}')
-    logger.info(f'Task {self.request.task} started with args={args}, kwargs={kwargs}')
-    cpu = subprocess.Popen("bin/cpu_fun", stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-    with cpu.stdout:
-        log_subprocess_output(cpu.stdout, logger=logger)
-    cpu.wait()
-    # stdout = cpu.communicate()[0]
-    # logger.info(stdout)
-    # job = Job.objects.filter(id=id)
-    return cpu.returncode
+    return logger, fpath, path, fname, model_name, extension
 
 
 @shared_task(bind=True)
@@ -97,26 +79,26 @@ def sbml_processing(self, job_id=None, *args, **kwargs):
         raise Exception(f'ERROR: input file ({fname}) missing matching extension (.json/.xml/.sbml)')
     logger.info('Successfully loaded model.')
 
-    # Make model consistent
-    fba_orig = m.slim_optimize()
-    rxns_orig = len(m.reactions)
-    mets_orig = len(m.metabolites)
-    tol_orig = m.tolerance
-
-    m.remove_reactions(find_blocked_reactions(m))
-    # TODO look for possible fix for Pool issue
-    m, _ = cobra.manipulation.delete.prune_unused_metabolites(m)
-
-    fba_cons = m.slim_optimize()
-    rxns_cons = len(m.reactions)
-    mets_cons = len(m.metabolites)
-
-    if abs(fba_orig - fba_cons) > (fba_orig * tol_orig):
-        logger.error(f'{fname}: difference in FBA objective is too large')
-        raise Exception(f'ERROR: {fname}: difference in FBA objective is too large')
-
-    logger.info(f'{model_name}:\n{rxns_orig} rxns, {mets_orig} mets, obj: {fba_orig} '
-                f'--> {rxns_cons} rxns, {mets_cons} mets, obj: {fba_cons}\n')
+    # Make model consistent - commented out for testing
+    # fba_orig = m.slim_optimize()
+    # rxns_orig = len(m.reactions)
+    # mets_orig = len(m.metabolites)
+    # tol_orig = m.tolerance
+    #
+    # m.remove_reactions(find_blocked_reactions(m))
+    # # TODO look for possible fix for Pool issue
+    # m, _ = cobra.manipulation.delete.prune_unused_metabolites(m)
+    #
+    # fba_cons = m.slim_optimize()
+    # rxns_cons = len(m.reactions)
+    # mets_cons = len(m.metabolites)
+    #
+    # if abs(fba_orig - fba_cons) > (fba_orig * tol_orig):
+    #     logger.error(f'{fname}: difference in FBA objective is too large')
+    #     raise Exception(f'ERROR: {fname}: difference in FBA objective is too large')
+    #
+    # logger.info(f'{model_name}:\n{rxns_orig} rxns, {mets_orig} mets, obj: {fba_orig} '
+    #             f'--> {rxns_cons} rxns, {mets_cons} mets, obj: {fba_cons}\n')
 
     # Get Biomass reaction
     # bm_rxn = m.objective.expression  # doesnt return pure id
@@ -255,9 +237,9 @@ def defigueiredo(self, result, job_id, *args, **kwargs):
                                                                       **kwargs)
 
     # cardinality - set as parameter?
-    dm = 2
+    dm = 3
     # threads - parameter?
-    t = 2
+    t = 10
 
     logger.info(f'Getting MCS: using up to d={dm} and t={t} thread(s)')
     os.chdir(path)
@@ -354,7 +336,7 @@ def pofcalc(self, result, job_id, *args, **kwargs):
                                          '-m', f'{model_name}.mcs.comp.binary',
                                          '-c', f'{model_name}.num_comp_rxns',
                                          '-r', "$(awk '{print NF}'", f'{model_name}.rfile)', # TODO wrong
-                                         '-o', f'{model_name}.mcs.comp',
+                                         # '-o', f'{model_name}.mcs.comp',
                                          '-d', f'{d}',
                                          '-t', f'{t}'
                 ]

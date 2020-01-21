@@ -3,8 +3,6 @@ from django.dispatch import receiver
 from django.utils import timezone
 from jobs.models import Job, SubTask
 from .tasks import \
-    cpu_test, \
-    cpu_test_two, \
     update_db_post_run, \
     sbml_processing, \
     compress_network, \
