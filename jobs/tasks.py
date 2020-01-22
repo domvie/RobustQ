@@ -229,7 +229,7 @@ def defigueiredo(self, result, job_id, *args, **kwargs):
                                                                       **kwargs)
 
     # cardinality - set as parameter?
-    dm = 4
+    dm = 2
     # threads - parameter?
     t = 10
 
