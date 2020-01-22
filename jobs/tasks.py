@@ -162,7 +162,7 @@ def compress_network(self, result, job_id, *args, **kwargs):
                                          '-m', f'{model_name}.mfile',
                                          '-r', f'{model_name}.rfile',
                                          '-v', f'{model_name}.rvfile',
-                                         '-i', f'{model_name}.nfile',
+                                         '-n', f'{model_name}.nfile',
                                          '-p', 'chg_proto.txt',
                                          '-o', '_comp',
                                          '-l',
@@ -252,7 +252,8 @@ def defigueiredo(self, result, job_id, *args, **kwargs):
                                          '-x', f'{model_name}_comp_dual.xfile',
                                          '-o', f'{model_name}.mcs.comp',
                                          '-t', f'{t}',
-                                         '-u', f'{dm}',
+                                         # '-u', f'{dm}',
+                                         '-l',
                                          '-p',
                                          '-i'
                 ]
