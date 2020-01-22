@@ -20,6 +20,7 @@ import logging
 from time import time
 import datetime
 import sys
+from django.core.cache import cache
 
 timer = {}
 
@@ -86,6 +87,9 @@ def task_publish_handler(sender=None, headers=None, body=None, **kwargs):
 @task_prerun.connect
 def task_prerun_handler(sender=None, task_id=None, task=None, *args, **kwargs):
     print(f'PRERUN handler setting up logging for {task_id}, {task}, sender {sender}')
+
+    cache.set("current_task", task_id, timeout=None)
+
     timer[task_id] = time()
     job_id = kwargs['kwargs']['job_id']
     job = Job.objects.filter(id=job_id)

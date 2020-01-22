@@ -15,13 +15,7 @@ import os
 from shutil import copyfile
 import logging
 import numpy as np
-
-current_task = dict()
-
-
-def get_current_task():
-    global current_task
-    return current_task
+from django.core.cache import cache
 
 
 BASE_DIR = os.getcwd()
@@ -34,10 +28,8 @@ def log_subprocess_output(pipe, logger=None):
 
 def setup_process(self, result, job_id, *args, **kwargs):
     """ Basic setup for most tasks. Configures task based logger and filepath variables """
-    global current_task
-    current_task["task_id"] = self.request.id
-    print(current_task)
 
+    cache.set("current_task", self.request.id, timeout=None)
     # Logging
     logger = get_task_logger(self.request.id)
     app.log.redirect_stdouts_to_logger(logger, loglevel=logging.INFO)
@@ -237,7 +229,7 @@ def defigueiredo(self, result, job_id, *args, **kwargs):
                                                                       **kwargs)
 
     # cardinality - set as parameter?
-    dm = 3
+    dm = 4
     # threads - parameter?
     t = 10
 
@@ -252,8 +244,8 @@ def defigueiredo(self, result, job_id, *args, **kwargs):
                                          '-x', f'{model_name}_comp_dual.xfile',
                                          '-o', f'{model_name}.mcs.comp',
                                          '-t', f'{t}',
-                                         # '-u', f'{dm}',
-                                         '-l',
+                                         '-u', f'{dm}',
+                                         # '-l',
                                          '-p',
                                          '-i'
                 ]
@@ -320,7 +312,7 @@ def pofcalc(self, result, job_id, *args, **kwargs):
 
     os.chdir(path)
     d = 3  # TODO parameterize
-    t = 5
+    t = 10
 
     logger.info(f'Transforming compressed MCS to binary representation')
     infile = f'{model_name}.rfile_comp'
@@ -331,12 +323,18 @@ def pofcalc(self, result, job_id, *args, **kwargs):
 
     np.savetxt(os.path.join(path, outfile), rxn_cnt.reshape(1, -1), fmt='%g', delimiter=' ')
 
+    # wordcounter
+    nr_words = 0
+    with open(f'{model_name}.rfile', 'r') as f:
+        for line in f:
+            nr_words += len(line.split())
+
     logger.info(f'Calculating PoF up to d={d}')
 
     cmd_args = [os.path.join(BASE_DIR, 'bin/PoFcalc'),
                                          '-m', f'{model_name}.mcs.comp.binary',
                                          '-c', f'{model_name}.num_comp_rxns',
-                                         '-r', "$(awk '{print NF}'", f'{model_name}.rfile)', # TODO wrong
+                                         '-r', f'{nr_words}',
                                          # '-o', f'{model_name}.mcs.comp',
                                          '-d', f'{d}',
                                          '-t', f'{t}'

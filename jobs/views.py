@@ -12,7 +12,7 @@ from celery.result import AsyncResult
 from django_tables2.views import SingleTableView
 from django.conf import settings
 from django.template.defaultfilters import filesizeformat
-from .tasks import get_current_task
+from django.core.cache import cache
 
 # @login_required
 # def new(request):
@@ -144,19 +144,21 @@ def cancel_job(request, pk):
         return redirect('index-home')
 
     try:
-        current_task = get_current_task()
-        print(current_task)
+        current_task = cache.get("current_task")
+        result = AsyncResult(current_task)
+        # terminate the running and all subsequent tasks
+        result.revoke(terminate=True)
     except KeyError:
         return JsonResponse({'not found': True})
 
-    subtasks = SubTask.objects.filter(job_id=pk)
-    for task in subtasks:
-        taskstatus = task.task_result.status
-        if taskstatus == 'PENDING':
-            res = AsyncResult(task.id)
-            print(task.id)
-            # res.revoke(terminate=True)
-            return JsonResponse({'success':True})
+    # subtasks = SubTask.objects.filter(job_id=pk)
+    # for task in subtasks:
+    #     taskstatus = task.task_result.status
+    #     if taskstatus == 'PENDING':
+    #         res = AsyncResult(task.id)
+    #         print(task.id)
+    #         # res.revoke(terminate=True)
+    #         return JsonResponse({'success':True})
 
 
 
