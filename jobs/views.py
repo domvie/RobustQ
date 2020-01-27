@@ -13,6 +13,8 @@ from django_tables2.views import SingleTableView
 from django.conf import settings
 from django.template.defaultfilters import filesizeformat
 from django.core.cache import cache
+import signal
+
 
 # @login_required
 # def new(request):
@@ -147,7 +149,7 @@ def cancel_job(request, pk):
         current_task = cache.get("current_task")
         result = AsyncResult(current_task)
         # terminate the running and all subsequent tasks
-        result.revoke(terminate=True)
+        result.revoke(terminate=True, signal='SIGKILL')
     except KeyError:
         return JsonResponse({'not found': True})
 

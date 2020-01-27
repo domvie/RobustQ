@@ -24,6 +24,9 @@ from django.core.cache import cache
 
 timer = {}
 
+# signal_tasks = [update_db_post_run, pofcalc, sbml_processing, compress_network, create_dual_system,
+#                 defigueiredo, mcs_to_binary]
+
 
 @receiver(post_save, sender=Job)
 def start_job(sender, instance, created, **kwargs):
@@ -63,8 +66,7 @@ def add_task_info(sender, instance, created, **kwargs):
     if task:
         task.update(task_result=instance)
     else:
-        # couldn't find task - something went wrong during the task
-        print('couldnt find task post_save - something went wrong during the task - Is instance ready?')
+        pass
 
 
 @receiver(post_delete, sender=Job)

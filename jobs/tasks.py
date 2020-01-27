@@ -8,6 +8,7 @@ from multiprocessing import cpu_count
 import time
 import random
 from django.utils import timezone
+from datetime import timedelta
 import subprocess
 from celery.utils.log import get_task_logger
 import sys
@@ -16,7 +17,10 @@ from shutil import copyfile
 import logging
 import numpy as np
 from django.core.cache import cache
-
+import shutil
+from celery.schedules import crontab
+from celery.contrib.abortable import AbortableTask, AbortableAsyncResult
+from celery.result import AsyncResult
 
 BASE_DIR = os.getcwd()
 
@@ -24,6 +28,45 @@ BASE_DIR = os.getcwd()
 def log_subprocess_output(pipe, logger=None):
     for line in iter(pipe.readline, b''): # b'\n'-separated lines
         logger.info('%r', line.decode('utf-8'))
+
+
+def check_abort_state(task_id, proc):
+    result = AbortableAsyncResult(task_id)
+    if result.is_aborted() or result.state == 'REVOKED':
+        logger = get_task_logger(task_id)
+        # respect aborted state, and terminate gracefully.
+        logger.warning('Task aborted')
+        proc.kill()
+
+
+def call_repeatedly(secs, func, task_id, proc):
+    while proc.poll() is None:
+        print(f'inside call_repeatedly for {task_id}')
+        logger = get_task_logger(task_id)
+        logger.info(f'inside call_repeatedly for {task_id}')
+        time.sleep(secs)
+        func(task_id, proc)
+    return True
+
+
+@app.task
+def cleanup_expired_results():
+    """ """
+    expired = timezone.now() - timedelta(days=7)  # objects older than 7 days will be deleted
+    print(f'Deleting expired jobs. All jobs before {expired} will be deleted now.')
+    jobs = Job.objects.filter(start_date__lt=expired, is_finished=True)
+    for job in jobs:
+        shutil.rmtree(os.path.dirname(job.sbml_file.path), ignore_errors=True)
+    jobs.delete()
+
+
+# Celery app scheduler
+app.conf.beat_schedule = {
+    'cleanup': {
+        'task': 'jobs.tasks.cleanup_expired_results',
+        'schedule': 3600  # once a day
+    }
+}
 
 
 def setup_process(self, result, job_id, *args, **kwargs):
@@ -138,7 +181,7 @@ def sbml_processing(self, job_id=None, *args, **kwargs):
     return bm_rxn
 
 
-@shared_task(bind=True, name="compress_network")
+@shared_task(bind=True, name="compress_network", base=AbortableTask)
 def compress_network(self, result, job_id, *args, **kwargs):
     """ """
 
@@ -165,6 +208,9 @@ def compress_network(self, result, job_id, *args, **kwargs):
         compress_process = subprocess.Popen(cmd_args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         with compress_process.stdout:
             log_subprocess_output(compress_process.stdout, logger=logger)
+        print(f'poll = {compress_process.poll()}')
+        compress_network.cancel_future_calls = call_repeatedly(5, check_abort_state, self.request.id, compress_process)
+
         compress_process.wait()
 
     except Exception as e:
@@ -221,7 +267,7 @@ def create_dual_system(self, result, job_id, *args, **kwargs):
     return create_dual_system_process.returncode
 
 
-@shared_task(bind=True, name="defigueiredo")
+@shared_task(bind=True, name="defigueiredo", base=AbortableTask)
 def defigueiredo(self, result, job_id, *args, **kwargs):
     """ """
 
@@ -257,6 +303,11 @@ def defigueiredo(self, result, job_id, *args, **kwargs):
 
         with defigueiredo_process.stdout:
             log_subprocess_output(defigueiredo_process.stdout, logger=logger)
+            if self.is_aborted():
+                # respect aborted state, and terminate gracefully.
+                logger.warning('Task aborted')
+                defigueiredo_process.kill()
+
         defigueiredo_process.wait()
 
     except Exception as e:
@@ -264,6 +315,9 @@ def defigueiredo(self, result, job_id, *args, **kwargs):
         raise e
 
     os.chdir(BASE_DIR)
+    # if defigueiredo_process.returncode:
+    #     raise subprocess.CalledProcessError(defigueiredo_process.returncode, cmd=)
+
     return defigueiredo_process.returncode
 
 
@@ -304,7 +358,7 @@ def mcs_to_binary(self, result, job_id, *args, **kwargs):
     os.chdir(BASE_DIR)
 
 
-@shared_task(bind=True, name="PoFcalc")
+@shared_task(bind=True, name="PoFcalc", base=AbortableTask)
 def pofcalc(self, result, job_id, *args, **kwargs):
     """ """
     logger, fpath, path, fname, model_name, extension = setup_process(self, job_id=job_id, result=result, *args,

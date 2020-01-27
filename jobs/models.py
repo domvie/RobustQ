@@ -24,7 +24,7 @@ class Job(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     submit_date = models.DateTimeField(default=timezone.now)
     start_date = models.DateTimeField(null=True, blank=True)
-    expiry_date = models.DateTimeField(null=True, blank=True)
+    # expiry_date = models.DateTimeField(null=True, blank=True)
     is_finished = models.BooleanField(default=False)
     finished_date = models.DateTimeField(blank=True, null=True)
     ip = models.GenericIPAddressField(null=True)
