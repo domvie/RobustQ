@@ -21,6 +21,8 @@ import shutil
 from celery.schedules import crontab
 from celery.contrib.abortable import AbortableTask, AbortableAsyncResult
 from celery.result import AsyncResult
+import threading
+
 
 BASE_DIR = os.getcwd()
 
@@ -30,23 +32,21 @@ def log_subprocess_output(pipe, logger=None):
         logger.info('%r', line.decode('utf-8'))
 
 
-def check_abort_state(task_id, proc):
+def check_abort_state(task_id, proc, logger):
     result = AbortableAsyncResult(task_id)
     if result.is_aborted() or result.state == 'REVOKED':
-        logger = get_task_logger(task_id)
         # respect aborted state, and terminate gracefully.
         logger.warning('Task aborted')
         proc.kill()
+        logger.warning('Task killed')
+        raise ChildProcessError(f'Task with PID {proc.pid} aborted by user')
 
 
-def call_repeatedly(secs, func, task_id, proc):
+def call_repeatedly(secs, func, task_id, proc, logger):
+
     while proc.poll() is None:
-        print(f'inside call_repeatedly for {task_id}')
-        logger = get_task_logger(task_id)
-        logger.info(f'inside call_repeatedly for {task_id}')
         time.sleep(secs)
-        func(task_id, proc)
-    return True
+        func(task_id, proc, logger)
 
 
 @app.task
@@ -58,13 +58,14 @@ def cleanup_expired_results():
     for job in jobs:
         shutil.rmtree(os.path.dirname(job.sbml_file.path), ignore_errors=True)
     jobs.delete()
+    # TODO delete taskresults?
 
 
 # Celery app scheduler
 app.conf.beat_schedule = {
     'cleanup': {
         'task': 'jobs.tasks.cleanup_expired_results',
-        'schedule': 3600  # once a day
+        'schedule': 3600
     }
 }
 
@@ -187,7 +188,6 @@ def compress_network(self, result, job_id, *args, **kwargs):
 
     logger, fpath, path, fname, model_name, extension = setup_process(self, job_id=job_id, result=result, *args,
                                                                       **kwargs)
-
     # change WD to folder containing the model and files etc. (upload folder)
     os.chdir(path)
 
@@ -206,10 +206,14 @@ def compress_network(self, result, job_id, *args, **kwargs):
     logger.info(f'Starting network compression script with the following arguments: {" ".join(cmd_args)}')
     try:
         compress_process = subprocess.Popen(cmd_args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        cache.set("running_task_pid", compress_process.pid)
+        logger.info(f'poll = {compress_process.poll()}')
+
+        threading.Thread(target=call_repeatedly, args=(3, check_abort_state, self.request.id, compress_process,
+                                                       logger)).start()
+
         with compress_process.stdout:
             log_subprocess_output(compress_process.stdout, logger=logger)
-        print(f'poll = {compress_process.poll()}')
-        compress_network.cancel_future_calls = call_repeatedly(5, check_abort_state, self.request.id, compress_process)
 
         compress_process.wait()
 

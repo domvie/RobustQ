@@ -88,6 +88,9 @@ def task_publish_handler(sender=None, headers=None, body=None, **kwargs):
 
 @task_prerun.connect
 def task_prerun_handler(sender=None, task_id=None, task=None, *args, **kwargs):
+    if sender.name == 'jobs.tasks.cleanup_expired_results':
+        return
+
     print(f'PRERUN handler setting up logging for {task_id}, {task}, sender {sender}')
 
     cache.set("current_task", task_id, timeout=None)

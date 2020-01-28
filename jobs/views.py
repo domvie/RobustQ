@@ -13,8 +13,9 @@ from django_tables2.views import SingleTableView
 from django.conf import settings
 from django.template.defaultfilters import filesizeformat
 from django.core.cache import cache
+from celery.contrib.abortable import AbortableAsyncResult
 import signal
-
+import os
 
 # @login_required
 # def new(request):
@@ -147,9 +148,24 @@ def cancel_job(request, pk):
 
     try:
         current_task = cache.get("current_task")
-        result = AsyncResult(current_task)
+        result = AbortableAsyncResult(current_task)
         # terminate the running and all subsequent tasks
-        result.revoke(terminate=True, signal='SIGKILL')
+        result.abort()
+        result.revoke(terminate=True)
+        job = Job.objects.filter(id=pk)
+        job.update(status="Cancelled")
+        # kill the process with the pid
+        pid = cache.get("running_task_pid")
+        try:
+            os.kill(pid, 0) # check if it is still running
+        except OSError:
+            pass
+        else:
+            try:
+                os.kill(pid, signal.SIGKILL) # if it is running, kill it
+            except ProcessLookupError:
+                pass
+
     except KeyError:
         return JsonResponse({'not found': True})
 

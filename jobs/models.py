@@ -8,12 +8,14 @@ import datetime
 from django_celery_results.models import TaskResult
 from .formatChecker import ContentTypeRestrictedFileField
 from django.conf import settings
+import os
 
 
 def user_directory_path(instance, filename):
     # file will be uploaded to MEDIA_ROOT/<user_id>/<filename>
     date = datetime.datetime.now().strftime('%d%m%y_%H%M%S')
-    return '{0}/{1}/{2}'.format(instance.user.id, date, filename)
+    fname_noext = os.path.splitext(filename)[0][:10] # max 10 characters
+    return '{0}/{1}_{2}/{3}'.format(instance.user.id, fname_noext, date, filename)
 
 
 def givemetimezone():
