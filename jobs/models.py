@@ -13,9 +13,10 @@ import os
 
 def user_directory_path(instance, filename):
     # file will be uploaded to MEDIA_ROOT/<user_id>/<filename>
+    user = instance.user.username
     date = datetime.datetime.now().strftime('%d%m%y_%H%M%S')
     fname_noext = os.path.splitext(filename)[0][:10] # max 10 characters
-    return '{0}/{1}_{2}/{3}'.format(instance.user.id, fname_noext, date, filename)
+    return '{0}_{1}/{2}_{3}/{4}'.format(instance.user.id, user, fname_noext, date, filename)
 
 
 def givemetimezone():

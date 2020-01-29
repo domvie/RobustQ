@@ -85,14 +85,14 @@ class JobDetailView(LoginRequiredMixin, UserPassesTestMixin, DetailView):
         job_dict.pop('ip')
         context['job'] = job_dict
         subtasks = job.subtask_set.all()
-        fpath = os.path.dirname(job.sbml_file.path)
+        fpath = os.path.dirname(os.path.relpath(job.sbml_file.path))
         if subtasks:
             context['tasks'] = [model_to_dict(t) for t in subtasks]
             for d in context['tasks']:
                 d.pop('id')
                 d.pop('user')
                 d.pop('job')
-                d['logfile'] = '<a href="' + os.path.join(fpath, f'logs/{d["name"]}.log') +'">'+f'{d["name"]}</a>'
+                d['logfile'] = os.path.join(fpath, f'logs/{d["name"]}.log')
                 # if d.get('task_result'):
                 #     d.update(('task_result', model_to_dict(task.task_result, fields=['status', 'name'])) for task in subtasks)
                     # d['task_result']['task_name'] = d['task_result']['task_name'].split('.')[-1]

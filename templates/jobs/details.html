@@ -46,7 +46,11 @@
 
                                             <div class="d-inline-flex">
                                         <li class="list-group-item list-group-item-info col-sm-3">{{ key|upper }}</li>
-                                        <li class="list-group-item list-group-item-light col-sm-9"> {{ value|safe }}</li>
+                                               {% if key == 'logfile' %}
+                                                   <li class="list-group-item list-group-item-light col-sm-9"> <a href="{{ value }}"> Logfile </a></li>
+                                               {% else %}
+                                                    <li class="list-group-item list-group-item-light col-sm-9"> {{ value|safe }}</li>
+                                               {% endif %}
                                             </div>
 
                                             {% endif %}
