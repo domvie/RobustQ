@@ -56,7 +56,7 @@ def start_job(sender, instance, created, **kwargs):
     while result.parent:
         parents.append(result.parent)
         result = result.parent  # parents is now a list of tasks in the chain
-    sender.objects.filter(id=instance.id).update(start_date=timezone.now(), total_subtasks=len(parents))
+    sender.objects.filter(id=instance.id).update(start_date=timezone.now())
 
 
 @receiver(post_save, sender=TaskResult)

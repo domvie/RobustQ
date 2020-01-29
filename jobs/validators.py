@@ -24,6 +24,7 @@ def sbml_validator(value):
             cobraval = cobra.io.validate_sbml_model(value.name)
         elif isinstance(value, FieldFile):
             if isinstance(value.file, InMemoryUploadedFile):
+                print(f'InMemory, value.name = {value.name}, value.file = {value.file}')
                 # if the uploaded file size is smaller than ~2.5MB, Django saves the file in memory
                 document = reader.readSBML(value.name)
                 # 2nd validation with cobra

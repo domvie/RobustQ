@@ -22,7 +22,8 @@ from celery.schedules import crontab
 from celery.contrib.abortable import AbortableTask, AbortableAsyncResult
 from celery.result import AsyncResult
 import threading
-
+from .custom_wraps import revoke_chain_authority, RevokeChainRequested
+from django.conf import settings
 
 BASE_DIR = os.getcwd()
 
@@ -115,6 +116,10 @@ def sbml_processing(self, job_id=None, *args, **kwargs):
         raise Exception(f'ERROR: input file ({fname}) missing matching extension (.json/.xml/.sbml)')
     logger.info('Successfully loaded model.')
 
+    reactions = len(m.reactions)
+    metabolites = len(m.metabolites)
+    genes = len(m.genes)
+
     # Make model consistent - commented out for testing
     # fba_orig = m.slim_optimize()
     # rxns_orig = len(m.reactions)
@@ -140,6 +145,9 @@ def sbml_processing(self, job_id=None, *args, **kwargs):
     # bm_rxn = m.objective.expression  # doesnt return pure id
     bm_rxn = list(cobra.util.solver.linear_reaction_coefficients(m))[0].id
     logger.info(f'Biomass reaction was found to be {bm_rxn}')
+
+    job = Job.objects.filter(id=job_id)
+    job.update(reactions=reactions, metabolites=metabolites, genes=genes, objective_expression=bm_rxn)
 
     # Extract info from model and write to respective files
     try:
@@ -183,6 +191,7 @@ def sbml_processing(self, job_id=None, *args, **kwargs):
 
 
 @shared_task(bind=True, name="compress_network", base=AbortableTask)
+@revoke_chain_authority
 def compress_network(self, result, job_id, *args, **kwargs):
     """ """
 
@@ -198,12 +207,18 @@ def compress_network(self, result, job_id, *args, **kwargs):
                                          '-r', f'{model_name}.rfile',
                                          '-v', f'{model_name}.rvfile',
                                          '-n', f'{model_name}.nfile',
+                                         '-i', f'{model_name}.nfile',
                                          '-p', 'chg_proto.txt',
                                          '-o', '_comp',
                                          '-l',
                                          '-k',
                                          ]
     logger.info(f'Starting network compression script with the following arguments: {" ".join(cmd_args)}')
+
+    if settings.DEBUG:
+        subtask = SubTask.objects.filter(task_id=self.request.id)
+        subtask.update(command_arguments=" ".join(cmd_args))
+
     try:
         compress_process = subprocess.Popen(cmd_args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         cache.set("running_task_pid", compress_process.pid)
@@ -225,10 +240,15 @@ def compress_network(self, result, job_id, *args, **kwargs):
     copyfile(os.path.join(path, f'{model_name}.nfile'), os.path.join(path, f'{model_name}.tfile_comp'))
 
     os.chdir(BASE_DIR)
+
+    if compress_process.returncode:
+        raise RevokeChainRequested(f'Process {self.name} had on-zero exit status')
+
     return compress_process.returncode
 
 
 @shared_task(bind=True, name="create_dual_system")
+@revoke_chain_authority
 def create_dual_system(self, result, job_id, *args, **kwargs):
     """ """
 
@@ -253,6 +273,10 @@ def create_dual_system(self, result, job_id, *args, **kwargs):
                                          '-o', f'{model_name}_comp'
                 ]
 
+    if settings.DEBUG:
+        subtask = SubTask.objects.filter(task_id=self.request.id)
+        subtask.update(command_arguments=" ".join(cmd_args))
+
     # Start the process
     try:
         logger.info(f'Starting {self.request.task} with the following arguments: {" ".join(cmd_args)}')
@@ -268,10 +292,15 @@ def create_dual_system(self, result, job_id, *args, **kwargs):
         raise e
 
     os.chdir(BASE_DIR)
+
+    if create_dual_system_process.returncode:
+        raise RevokeChainRequested(f'Process {self.name} had on-zero exit status')
+
     return create_dual_system_process.returncode
 
 
 @shared_task(bind=True, name="defigueiredo", base=AbortableTask)
+@revoke_chain_authority
 def defigueiredo(self, result, job_id, *args, **kwargs):
     """ """
 
@@ -299,6 +328,11 @@ def defigueiredo(self, result, job_id, *args, **kwargs):
                                          '-p',
                                          '-i'
                 ]
+
+    if settings.DEBUG:
+        subtask = SubTask.objects.filter(task_id=self.request.id)
+        subtask.update(command_arguments=" ".join(cmd_args))
+
     # Start the process
     try:
         logger.info(f'Starting {self.request.task} with the following arguments: {" ".join(cmd_args)}')
@@ -319,8 +353,9 @@ def defigueiredo(self, result, job_id, *args, **kwargs):
         raise e
 
     os.chdir(BASE_DIR)
-    # if defigueiredo_process.returncode:
-    #     raise subprocess.CalledProcessError(defigueiredo_process.returncode, cmd=)
+
+    if defigueiredo_process.returncode:
+        raise RevokeChainRequested(f'Process {self.name} had on-zero exit status')
 
     return defigueiredo_process.returncode
 
@@ -363,6 +398,7 @@ def mcs_to_binary(self, result, job_id, *args, **kwargs):
 
 
 @shared_task(bind=True, name="PoFcalc", base=AbortableTask)
+@revoke_chain_authority
 def pofcalc(self, result, job_id, *args, **kwargs):
     """ """
     logger, fpath, path, fname, model_name, extension = setup_process(self, job_id=job_id, result=result, *args,
@@ -397,6 +433,11 @@ def pofcalc(self, result, job_id, *args, **kwargs):
                                          '-d', f'{d}',
                                          '-t', f'{t}'
                 ]
+
+    if settings.DEBUG:
+        subtask = SubTask.objects.filter(task_id=self.request.id)
+        subtask.update(command_arguments=" ".join(cmd_args))
+
     # Start the process
     try:
         logger.info(f'Starting {self.request.task} with the following arguments: {" ".join(cmd_args)}')
@@ -412,4 +453,8 @@ def pofcalc(self, result, job_id, *args, **kwargs):
         raise e
 
     os.chdir(BASE_DIR)
+
+    if pofcalc_process.returncode:
+        raise RevokeChainRequested(f'Process {self.name} had on-zero exit status')
+
     return pofcalc_process.returncode

@@ -30,7 +30,11 @@ class Job(models.Model):
     is_finished = models.BooleanField(default=False)
     finished_date = models.DateTimeField(blank=True, null=True)
     ip = models.GenericIPAddressField(null=True)
-    total_subtasks = models.IntegerField(null=True)
+    # total_subtasks = models.IntegerField(null=True)
+    reactions = models.IntegerField(null=True)
+    metabolites = models.IntegerField(null=True)
+    genes = models.IntegerField(null=True)
+    objective_expression = models.CharField(max_length=100, null=True)
     status = models.CharField(max_length=20, null=True, default='Queued')
     result = models.CharField(max_length=50, null=True)
     sbml_file = ContentTypeRestrictedFileField(upload_to=user_directory_path, content_types=['text/xml', 'application/json',
@@ -50,4 +54,5 @@ class SubTask(models.Model):
     task_result = models.OneToOneField(TaskResult, on_delete=models.CASCADE, null=True)
     task_id = models.CharField(max_length=50, null=False, unique=True)
     name = models.CharField(max_length=70, null=True)
+    command_arguments = models.CharField(max_length=1000, null=True)
 

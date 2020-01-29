@@ -32,22 +32,24 @@
                             {% for task in tasks %}
                                 <small>Subtask {{ forloop.counter }}</small>
                                     {% for key, value in task.items %}
-                                        {% if key == 'task_result' %}
+                                        {% if value is not None %}
+                                            {% if key == 'task_result' %}
 
-                                            {% for k, v in value.items %}
-                                                <div class="d-inline-flex">
-                                            <li class="list-group-item list-group-item-info col-sm-3">{{ k|upper }}</li>
-                                            <li class="list-group-item list-group-item-light col-sm-9"> {{ v }}</li>
-                                                </div>
-                                            {% endfor %}
+                                                {% for k, v in value.items %}
+                                                    <div class="d-inline-flex">
+                                                <li class="list-group-item list-group-item-info col-sm-3">{{ k|upper }}</li>
+                                                <li class="list-group-item list-group-item-light col-sm-9"> {{ v|safe }}</li>
+                                                    </div>
+                                                {% endfor %}
 
-                                        {% else %}
+                                            {% else %}
 
-                                        <div class="d-inline-flex">
-                                    <li class="list-group-item list-group-item-info col-sm-3">{{ key|upper }}</li>
-                                    <li class="list-group-item list-group-item-light col-sm-9"> {{ value }}</li>
-                                        </div>
+                                            <div class="d-inline-flex">
+                                        <li class="list-group-item list-group-item-info col-sm-3">{{ key|upper }}</li>
+                                        <li class="list-group-item list-group-item-light col-sm-9"> {{ value|safe }}</li>
+                                            </div>
 
+                                            {% endif %}
                                         {% endif %}
                                     {% endfor %}
                             <br>
