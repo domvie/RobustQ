@@ -15,45 +15,51 @@
                 <h3>Job #{{ job.id }} - Details</h3>
             </div>
             <div class="card-body">
-                <div class="py-2 pt-3 container">
+                <tr class="py-2 pt-3 container">
                 <a href="{% url 'jobs' %}" class="btn btn-sm btn-outline-info">Overview <i class="fas fa-list"></i></a>
+                        <br>
                     {% if job %}
-                        <ul class="list-group list-group-flush py-1">
+                        <br>
+
+                        <table class="table table-sm table-condensed table-striped table-hover">
                         {% for key, value in job.items %}
-                            <div class="d-sm-inline-flex flex-sm-row align-item-sm-center">
-                                <li class="list-group-item list-group-item-info col-sm-3">{{ key|upper }}</li>
-                                <li class="list-group-item list-group-item-light col-sm-9"> {{ value }}</li>
-                            </div>
+                            <tr class="row">
+{#                                <div class="d-sm-inline-flex flex-sm-row align-item-sm-center">#}
+                                <td class="table-info col-sm-3"><b>{{ key|upper }}</b></td>
+                                <td class="table-light col-sm-9">{{ value }} </td>
+{#                                </div>#}
+                            </tr>
                         {% endfor %}
-                        </ul>
-                        
+                        </table>
+
                         {% if tasks %}
                             <p class="h4">Task details</p>
-                            <ul class="list-group list-group-flush py-1">
+                            <small>Subtask {{ forloop.counter }}</small>
+
                             {% for task in tasks %}
-                                <small>Subtask {{ forloop.counter }}</small>
+                        <table class="table table-sm table-condensed table-striped table-hover">
                                     {% for key, value in task.items %}
                                         {% if value is not None %}
                                             {% if key == 'task_result' %}
 
                                                 {% for k, v in value.items %}
-                                                    <div class="d-inline-flex">
-                                                <li class="list-group-item list-group-item-info col-sm-3">{{ k|upper }}</li>
-                                                <li class="list-group-item list-group-item-light col-sm-9"> {{ v|safe }}</li>
-                                                    </div>
+                                                    <tr class="row">
+                                                <td class="table-info col-sm-3">{{ k|upper }}</td>
+                                                <td class="table-light col-sm-9">{{ v|safe }}</td>
+                                                    </tr>
                                                 {% endfor %}
 
                                             {% else %}
 
-                                            <div class="d-inline-flex">
+                                            <tr class="row">
 
-                                        <li class="list-group-item list-group-item-info col-sm-3">{{ key|upper }}</li>
+                                            <td class="table-info col-sm-3">{{ key|upper }}</td>
 
                                                {% if key == 'logfile' %}
-                                                   <li class="list-group-item list-group-item-light col-sm-9">
+                                                   <td class="table-light col-sm-9">
                                                        <a class="btn btn-sm btn-outline-secondary" data-toggle="collapse"
                                                           href="#log_{{ task.name }}" role="button" aria-expanded="false"
-                                                          aria-controls="log_{{ task.name }}"> Logdata </a>
+                                                          aria-controls="log_{{ task.name }}">Logdata</a>
                                                         <a href="{{ task.logfile.path }}" class="btn btn-sm btn-outline-secondary">Download</a>
                                                    <div class="collapse p-2" id="log_{{ task.name }}">
 
@@ -69,20 +75,20 @@
                                                       </div>
 
                                                     </div>
-                                                   </li>
+                                                   </td>
 
                                                {% else %}
-                                                    <li class="list-group-item list-group-item-light col-sm-9"> {{ value|safe }}</li>
+                                                    <td class="table-light col-sm-9">{{ value|safe }}</td>
                                                {% endif %}
 
-                                            </div>
+                                            </tr>
 
                                             {% endif %}
                                         {% endif %}
                                     {% endfor %}
-                            <br>
+                                                            </table>
+
                             {% endfor %}
-                            </ul>
                             {% endif %}
                             {% if not job.is_finished %}
                             <a id="cancel_btn" class="btn btn-sm btn-outline-warning">Cancel</a>

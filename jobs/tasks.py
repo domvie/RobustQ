@@ -242,7 +242,7 @@ def compress_network(self, result, job_id, *args, **kwargs):
     os.chdir(BASE_DIR)
 
     if compress_process.returncode:
-        raise RevokeChainRequested(f'Process {self.name} had on-zero exit status')
+        raise RevokeChainRequested(f'Process {self.name} had non-zero exit status')
 
     return compress_process.returncode
 
@@ -294,7 +294,7 @@ def create_dual_system(self, result, job_id, *args, **kwargs):
     os.chdir(BASE_DIR)
 
     if create_dual_system_process.returncode:
-        raise RevokeChainRequested(f'Process {self.name} had on-zero exit status')
+        raise RevokeChainRequested(f'Process {self.name} had non-zero exit status')
 
     return create_dual_system_process.returncode
 
@@ -355,7 +355,7 @@ def defigueiredo(self, result, job_id, *args, **kwargs):
     os.chdir(BASE_DIR)
 
     if defigueiredo_process.returncode:
-        raise RevokeChainRequested(f'Process {self.name} had on-zero exit status')
+        raise RevokeChainRequested(f'Process {self.name} had non-zero exit status')
 
     return defigueiredo_process.returncode
 
@@ -455,6 +455,6 @@ def pofcalc(self, result, job_id, *args, **kwargs):
     os.chdir(BASE_DIR)
 
     if pofcalc_process.returncode:
-        raise RevokeChainRequested(f'Process {self.name} had on-zero exit status')
+        raise RevokeChainRequested(f'Process {self.name} had non-zero exit status')
 
     return pofcalc_process.returncode
