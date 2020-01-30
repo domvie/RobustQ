@@ -26,6 +26,7 @@
                             </div>
                         {% endfor %}
                         </ul>
+                        
                         {% if tasks %}
                             <p class="h4">Task details</p>
                             <ul class="list-group list-group-flush py-1">
@@ -45,12 +46,35 @@
                                             {% else %}
 
                                             <div class="d-inline-flex">
+
                                         <li class="list-group-item list-group-item-info col-sm-3">{{ key|upper }}</li>
+
                                                {% if key == 'logfile' %}
-                                                   <li class="list-group-item list-group-item-light col-sm-9"> <a href="{{ value }}"> Logfile </a></li>
+                                                   <li class="list-group-item list-group-item-light col-sm-9">
+                                                       <a class="btn btn-sm btn-outline-secondary" data-toggle="collapse"
+                                                          href="#log_{{ task.name }}" role="button" aria-expanded="false"
+                                                          aria-controls="log_{{ task.name }}"> Logdata </a>
+                                                        <a href="{{ task.logfile.path }}" class="btn btn-sm btn-outline-secondary">Download</a>
+                                                   <div class="collapse p-2" id="log_{{ task.name }}">
+
+                                                      <div class="card card-body" style="height: 30rem">
+                                                          <div class="container overflow-auto" style="height: 30rem">
+                                                            <code style="color: black;">
+                                                          {% for line in task.logfile.logdata %}
+                                                              <br>
+                                                                {{ line }}
+                                                          {% endfor %}
+                                                            </code>
+                                                          </div>
+                                                      </div>
+
+                                                    </div>
+                                                   </li>
+
                                                {% else %}
                                                     <li class="list-group-item list-group-item-light col-sm-9"> {{ value|safe }}</li>
                                                {% endif %}
+
                                             </div>
 
                                             {% endif %}

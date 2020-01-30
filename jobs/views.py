@@ -16,6 +16,7 @@ from django.core.cache import cache
 from celery.contrib.abortable import AbortableAsyncResult
 import signal
 import os
+from django.utils import html
 
 # @login_required
 # def new(request):
@@ -92,7 +93,15 @@ class JobDetailView(LoginRequiredMixin, UserPassesTestMixin, DetailView):
                 d.pop('id')
                 d.pop('user')
                 d.pop('job')
-                d['logfile'] = os.path.join(fpath, f'logs/{d["name"]}.log')
+
+                d['logfile'] = {}
+
+                with open(d['logfile_path'], 'r') as l:
+                    d['logfile']['logdata'] = l.readlines()
+
+                l.close()
+
+                d['logfile']['path'] = '/' + os.path.relpath(d.pop('logfile_path'))  # settings.STATIC_URL + os.path.join(fpath, f'logs/{d["name"]}.log')
                 # if d.get('task_result'):
                 #     d.update(('task_result', model_to_dict(task.task_result, fields=['status', 'name'])) for task in subtasks)
                     # d['task_result']['task_name'] = d['task_result']['task_name'].split('.')[-1]

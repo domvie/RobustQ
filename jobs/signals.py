@@ -21,6 +21,8 @@ from time import time
 import datetime
 import sys
 from django.core.cache import cache
+from django.conf import settings
+
 
 timer = {}
 
@@ -100,13 +102,17 @@ def task_prerun_handler(sender=None, task_id=None, task=None, *args, **kwargs):
     job = Job.objects.filter(id=job_id)
     job.update(status="Started")
     job = job.get()
-    SubTask.objects.create(job=job, user=job.user, task_id=task_id, name=task.name)
 
     fpath = job.sbml_file.path
     path = os.path.dirname(fpath)
     path_logs = os.path.join(path, 'logs')
+    public_logs = os.path.join(settings.STATICFILES_DIRS[0], 'logs')
     if not os.path.exists(path_logs):
         os.mkdir(path_logs)
+    if not os.path.exists(public_logs):
+        os.mkdir(public_logs)
+
+
     # Set up logging for each task individually
     logger = get_task_logger(task_id) #logging.getLogger(task_id)
     logger.propagate = False
@@ -122,10 +128,23 @@ def task_prerun_handler(sender=None, task_id=None, task=None, *args, **kwargs):
     task_handler.setFormatter(formatter)
     task_handler.setLevel(logging.INFO)
 
+    # Adding second File Handle with file path. Filename is task_id
+    public_user_path = os.path.join(public_logs, os.path.relpath(path_logs))
+    if not os.path.exists(public_user_path):
+        os.makedirs(public_user_path)
+    user_task_logfile_path = os.path.join(public_user_path, task.name+'.log')
+    public_log_handler = logging.FileHandler(user_task_logfile_path)
+    public_log_handler.setFormatter(formatter)
+    public_log_handler.setLevel(logging.INFO)
+
     logger.addHandler(stream_handler)
     logger.addHandler(task_handler)
+    logger.addHandler(public_log_handler)
     logger.info(f'Starting task id {task_id} for task {task.name}')
     # task = SubTask.objects.filter(task_id=task_id)
+
+    SubTask.objects.create(job=job, user=job.user, task_id=task_id, name=task.name, logfile_path=user_task_logfile_path)
+
 
 
 @task_postrun.connect

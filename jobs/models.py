@@ -52,8 +52,8 @@ class SubTask(models.Model):
     """connects Job - User - TaskResult models """
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     job = models.ForeignKey(Job, on_delete=models.CASCADE)
-    task_result = models.OneToOneField(TaskResult, on_delete=models.CASCADE, null=True)
+    task_result = models.OneToOneField(TaskResult, on_delete=models.CASCADE, null=True) # TODO maybe change cascade?
     task_id = models.CharField(max_length=50, null=False, unique=True)
     name = models.CharField(max_length=70, null=True)
     command_arguments = models.CharField(max_length=1000, null=True)
-
+    logfile_path = models.FilePathField(null=True, max_length=250)
