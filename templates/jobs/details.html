@@ -90,6 +90,7 @@
 
                             {% endfor %}
                             {% endif %}
+                    <a href="{% url 'jobs' %}" class="btn btn-sm btn-outline-secondary"><i class="fas fa-arrow-alt-circle-left"></i> Back</a>
                             {% if not job.is_finished %}
                             <a id="cancel_btn" class="btn btn-sm btn-outline-warning">Cancel</a>
                         {% endif %}

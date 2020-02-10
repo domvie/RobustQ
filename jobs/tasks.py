@@ -24,13 +24,16 @@ from celery.result import AsyncResult
 import threading
 from .custom_wraps import revoke_chain_authority, RevokeChainRequested
 from django.conf import settings
+import io
+
 
 BASE_DIR = os.getcwd()
 
 
 def log_subprocess_output(pipe, logger=None):
     for line in iter(pipe.readline, b''): # b'\n'-separated lines
-        logger.info('%r', line.decode('utf-8'))
+    # for line in io.TextIOWrapper(pipe, encoding="utf-8"):
+        logger.info('%s', line.decode('utf-8').rstrip().replace(r'\n', '\n'))  # TODO
 
 
 def check_abort_state(task_id, proc, logger):
@@ -206,7 +209,7 @@ def compress_network(self, result, job_id, *args, **kwargs):
                                          '-m', f'{model_name}.mfile',
                                          '-r', f'{model_name}.rfile',
                                          '-v', f'{model_name}.rvfile',
-                                         '-n', f'{model_name}.nfile',
+                                         # '-n', f'{model_name}.nfile',
                                          '-i', f'{model_name}.nfile',
                                          '-p', 'chg_proto.txt',
                                          '-o', '_comp',
@@ -220,7 +223,8 @@ def compress_network(self, result, job_id, *args, **kwargs):
         subtask.update(command_arguments=" ".join(cmd_args))
 
     try:
-        compress_process = subprocess.Popen(cmd_args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        compress_process = subprocess.Popen(cmd_args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, bufsize=1,
+                                            universal_newlines=True)
         cache.set("running_task_pid", compress_process.pid)
         logger.info(f'poll = {compress_process.poll()}')
 
@@ -354,8 +358,8 @@ def defigueiredo(self, result, job_id, *args, **kwargs):
 
     os.chdir(BASE_DIR)
 
-    if defigueiredo_process.returncode:
-        raise RevokeChainRequested(f'Process {self.name} had non-zero exit status')
+    # if defigueiredo_process.returncode:
+    #     raise RevokeChainRequested(f'Process {self.name} had non-zero exit status')
 
     return defigueiredo_process.returncode
 
