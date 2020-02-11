@@ -7,7 +7,6 @@ class RevokeChainRequested(Exception):
     def __init__(self, return_value):
         Exception.__init__(self, "")
 
-        # Now for your custom code...
         self.return_value = return_value
 
 

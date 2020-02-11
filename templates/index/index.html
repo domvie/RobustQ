@@ -2,18 +2,16 @@
 
 {% block content %}
 
-    <div class="card border">
+    <div class="card">
         <div class="jumbotron">
         {% if user.is_authenticated %}
         <h3>Welcome, {{ user.username }}!</h3>
         <p>You currently have <a href="{% url 'jobs' %}">{{ running_jobs.count }} jobs</a> running.</p>
-
         {% else %}
         <h3>Welcome to RobustQ!</h3>
             <p>RobustQ is a service to quantify cellular robustness. Learn more about it <a href="#" class="link text">here</a>.</p>
         {% endif %}
     </div>
-
         <div class="card-body p-2">
 
             {% if user.is_authenticated %}

@@ -60,7 +60,7 @@ class JobTable(tables.Table):
 
     class Meta:
         model = Job
-        fields = ['id', 'user', 'start_date', 'sbml_file', 'status', 'finished_date',
+        fields = ['id', 'start_date', 'sbml_file', 'status', 'finished_date', 'result',
                   'details']
 
         attrs = {

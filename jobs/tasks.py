@@ -33,7 +33,14 @@ BASE_DIR = os.getcwd()
 def log_subprocess_output(pipe, logger=None):
     for line in iter(pipe.readline, b''): # b'\n'-separated lines
     # for line in io.TextIOWrapper(pipe, encoding="utf-8"):
-        logger.info('%s', line.decode('utf-8').rstrip().replace(r'\n', '\n'))  # TODO
+    #     try:
+    #         line = line.decode('utf-8')
+    #     except Exception:
+    #         pass
+    #     line = line.rstrip().replace(r'\n', '\n')
+    #     if line is not None and line is not '':
+        logger.info('%s', line.decode('utf-8').strip().strip('\"').replace(r'\n', '\n'))  # TODO
+
 
 
 def check_abort_state(task_id, proc, logger):
@@ -223,8 +230,7 @@ def compress_network(self, result, job_id, *args, **kwargs):
         subtask.update(command_arguments=" ".join(cmd_args))
 
     try:
-        compress_process = subprocess.Popen(cmd_args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, bufsize=1,
-                                            universal_newlines=True)
+        compress_process = subprocess.Popen(cmd_args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         cache.set("running_task_pid", compress_process.pid)
         logger.info(f'poll = {compress_process.poll()}')
 
@@ -448,8 +454,19 @@ def pofcalc(self, result, job_id, *args, **kwargs):
 
         pofcalc_process = subprocess.Popen(cmd_args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
 
-        with pofcalc_process.stdout:
-            log_subprocess_output(pofcalc_process.stdout, logger=logger)
+        out, err = pofcalc_process.communicate()
+        out = out.decode('utf-8').strip().strip('\"').replace(r'\n', '\n')
+        logger.info(out)
+        if err:
+            logger.error(err)
+            raise Exception(err)
+
+        if 'Final PoF' in out.splitlines()[-1]:
+            # gets the result from the process output
+            pof_result = out.splitlines()[-1].split()[-1] # TODO convert to float?
+            job = Job.objects.filter(id=job_id)
+            job.update(result=pof_result)  # stores the string of the result
+
         pofcalc_process.wait()
         logger.info(f'Finished!')
     except Exception as e:
@@ -460,5 +477,6 @@ def pofcalc(self, result, job_id, *args, **kwargs):
 
     if pofcalc_process.returncode:
         raise RevokeChainRequested(f'Process {self.name} had non-zero exit status')
+    else:
+        return float(pof_result) if pof_result else pofcalc_process.returncode
 
-    return pofcalc_process.returncode

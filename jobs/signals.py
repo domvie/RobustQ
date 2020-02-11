@@ -171,7 +171,7 @@ def task_postrun_handler(sender, task_id, task, retval, state, *args,  **kwargs)
 def task_failure_handler(sender=None, task_id=None, exception=None, *args, **kwargs):
     task = SubTask.objects.filter(task_id=task_id).get()
     job = Job.objects.filter(id=task.job.id)
-    job.update(status="Failure")
+    job.update(status="Failure", is_finished=True)
     logger = get_task_logger(task_id)
     logger.error(f'Task {task_id} failed. Exception: {exception}')
 
