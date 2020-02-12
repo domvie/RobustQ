@@ -31,22 +31,21 @@ BASE_DIR = os.getcwd()
 
 
 def log_subprocess_output(pipe, logger=None):
+    formatter_new = logging.Formatter('[%(asctime)s] %(message)s')
+    # change logger format temporarily while reading stdout - dirty solution?
+    for loggr in logger.handlers:
+        loggr.setFormatter(formatter_new)
     for line in iter(pipe.readline, b''): # b'\n'-separated lines
-    # for line in io.TextIOWrapper(pipe, encoding="utf-8"):
-    #     try:
-    #         line = line.decode('utf-8')
-    #     except Exception:
-    #         pass
-    #     line = line.rstrip().replace(r'\n', '\n')
-    #     if line is not None and line is not '':
-        logger.info('%s', line.decode('utf-8').strip().strip('\"').replace(r'\n', '\n'))  # TODO
-
+        logger.info('%s', line.decode('utf-8').strip().strip('\"').replace(r'\n', '\n'))
+    # return back to normal formatting
+    for loggr in logger.handlers:
+        loggr.setFormatter(logging.Formatter('[%(asctime)s][%(levelname)s] %(message)s'))
 
 
 def check_abort_state(task_id, proc, logger):
     result = AbortableAsyncResult(task_id)
     if result.is_aborted() or result.state == 'REVOKED':
-        # respect aborted state, and terminate gracefully.
+        # respect aborted state, and terminate gracefully
         logger.warning('Task aborted')
         proc.kill()
         logger.warning('Task killed')
@@ -54,7 +53,6 @@ def check_abort_state(task_id, proc, logger):
 
 
 def call_repeatedly(secs, func, task_id, proc, logger):
-
     while proc.poll() is None:
         time.sleep(secs)
         func(task_id, proc, logger)
@@ -63,7 +61,8 @@ def call_repeatedly(secs, func, task_id, proc, logger):
 @app.task
 def cleanup_expired_results():
     """ """
-    expired = timezone.now() - timedelta(days=7)  # objects older than 7 days will be deleted
+    # objects older than x (default 14) days will be deleted
+    expired = timezone.now() - timedelta(days=settings['DAYS_UNTIL_JOB_DELETE'])
     print(f'Deleting expired jobs. All jobs before {expired} will be deleted now.')
     jobs = Job.objects.filter(start_date__lt=expired, is_finished=True)
     for job in jobs:
@@ -210,6 +209,10 @@ def compress_network(self, result, job_id, *args, **kwargs):
     # change WD to folder containing the model and files etc. (upload folder)
     os.chdir(path)
 
+    if not kwargs['do_compress']:
+        logger.info('Compression set to False, skipping compression')
+        return
+
     # call the script process
     cmd_args = [os.path.join(BASE_DIR, 'scripts/compress_network.pl'),
                                          '-s', f'{model_name}.sfile',
@@ -232,8 +235,6 @@ def compress_network(self, result, job_id, *args, **kwargs):
     try:
         compress_process = subprocess.Popen(cmd_args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         cache.set("running_task_pid", compress_process.pid)
-        logger.info(f'poll = {compress_process.poll()}')
-
         threading.Thread(target=call_repeatedly, args=(3, check_abort_state, self.request.id, compress_process,
                                                        logger)).start()
 
@@ -272,15 +273,24 @@ def create_dual_system(self, result, job_id, *args, **kwargs):
     filetypes = ['r', 'm', 's', 'rv', 't']
     with open(os.path.join(path, f'{model_name}.inp'), 'w') as f:
         for type in filetypes:
-            if type != "t":
-                f.write(f'{model_name}.{type}file_comp,')
-            else:
-                f.write(f'{model_name}.{type}file_comp')
+            if kwargs['do_compress']:
+                if type != "t":
+                    f.write(f'{model_name}.{type}file_comp,')
+                else:
+                    f.write(f'{model_name}.{type}file_comp')
+            else:  # if we don't compress the network
+                if type != "t":
+                    f.write(f'{model_name}.{type}file,')
+                else:
+                    f.write(f'{model_name}.{type}file')
+                    copyfile(os.path.join(path, f'{model_name}.nfile'), os.path.join(path, f'{model_name}.tfile'))
+
     f.close()
+    comp_suffix = 'comp' if kwargs['do_compress'] else 'uncomp'
 
     cmd_args = [os.path.join(BASE_DIR, 'scripts/create_ccds_files.pl'),
                                          '-c', f'{model_name}.inp',
-                                         '-o', f'{model_name}_comp'
+                                         '-o', f'{model_name}_{comp_suffix}'
                 ]
 
     if settings.DEBUG:
@@ -311,27 +321,27 @@ def create_dual_system(self, result, job_id, *args, **kwargs):
 
 @shared_task(bind=True, name="defigueiredo", base=AbortableTask)
 @revoke_chain_authority
-def defigueiredo(self, result, job_id, *args, **kwargs):
+def defigueiredo(self, result, job_id, cardinality, *args, **kwargs):
     """ """
 
     logger, fpath, path, fname, model_name, extension = setup_process(self, job_id=job_id, result=result, *args,
                                                                       **kwargs)
 
-    # cardinality - set as parameter?
-    dm = 2
+    dm = cardinality
     # threads - parameter?
     t = 10
+    comp_suffix = 'comp' if kwargs['do_compress'] else 'uncomp'
 
     logger.info(f'Getting MCS: using up to d={dm} and t={t} thread(s)')
     os.chdir(path)
     cmd_args = [os.path.join(BASE_DIR, 'bin/defigueiredo'),
-                                         '-m', f'{model_name}_comp_dual.mfile',
-                                         '-r', f'{model_name}_comp_dual.rfile',
-                                         '-s', f'{model_name}_comp_dual.sfile',
-                                         '-v', f'{model_name}_comp_dual.vfile',
-                                         '-c', f'{model_name}_comp_dual.cfile',
-                                         '-x', f'{model_name}_comp_dual.xfile',
-                                         '-o', f'{model_name}.mcs.comp',
+                                         '-m', f'{model_name}_{comp_suffix}_dual.mfile',
+                                         '-r', f'{model_name}_{comp_suffix}_dual.rfile',
+                                         '-s', f'{model_name}_{comp_suffix}_dual.sfile',
+                                         '-v', f'{model_name}_{comp_suffix}_dual.vfile',
+                                         '-c', f'{model_name}_{comp_suffix}_dual.cfile',
+                                         '-x', f'{model_name}_{comp_suffix}_dual.xfile',
+                                         '-o', f'{model_name}.mcs.{comp_suffix}',
                                          '-t', f'{t}',
                                          '-u', f'{dm}',
                                          # '-l',
@@ -377,10 +387,12 @@ def mcs_to_binary(self, result, job_id, *args, **kwargs):
                                                                       **kwargs)
 
     os.chdir(path)
-    logger.info(f'Transforming compressed MCS to binary representation')
-    mcs_fname = f'{model_name}.mcs.comp'
-    rxns_fname = f'{model_name}.rfile_comp'
-    output_file = f'{model_name}.mcs.comp.binary'
+    comp_suffix = 'comp' if kwargs['do_compress'] else 'uncomp'
+
+    logger.info(f'Transforming MCS to binary representation')
+    mcs_fname = f'{model_name}.mcs.{comp_suffix}'
+    rxns_fname = f'{model_name}.rfile_comp' if kwargs['do_compress'] else f'{model_name}.rfile'
+    output_file = f'{model_name}.mcs.{comp_suffix}.binary'
 
     try:
         with open(os.path.join(path, rxns_fname), 'r') as f:
@@ -409,40 +421,45 @@ def mcs_to_binary(self, result, job_id, *args, **kwargs):
 
 @shared_task(bind=True, name="PoFcalc", base=AbortableTask)
 @revoke_chain_authority
-def pofcalc(self, result, job_id, *args, **kwargs):
+def pofcalc(self, result, job_id, cardinality, *args, **kwargs):
     """ """
     logger, fpath, path, fname, model_name, extension = setup_process(self, job_id=job_id, result=result, *args,
                                                                       **kwargs)
 
     os.chdir(path)
-    d = 3  # TODO parameterize
+    d = cardinality
     t = 10
-
-    logger.info(f'Transforming compressed MCS to binary representation')
-    infile = f'{model_name}.rfile_comp'
-    outfile = f'{model_name}.num_comp_rxns'
-
-    rxn = np.genfromtxt(os.path.join(path, infile), dtype=str)
-    rxn_cnt = np.char.count(rxn, '%') + 1
-
-    np.savetxt(os.path.join(path, outfile), rxn_cnt.reshape(1, -1), fmt='%g', delimiter=' ')
-
-    # wordcounter
-    nr_words = 0
-    with open(f'{model_name}.rfile', 'r') as f:
-        for line in f:
-            nr_words += len(line.split())
+    comp_suffix = 'comp' if kwargs['do_compress'] else 'uncomp'
 
     logger.info(f'Calculating PoF up to d={d}')
 
     cmd_args = [os.path.join(BASE_DIR, 'bin/PoFcalc'),
-                                         '-m', f'{model_name}.mcs.comp.binary',
-                                         '-c', f'{model_name}.num_comp_rxns',
-                                         '-r', f'{nr_words}',
+                                         '-m', f'{model_name}.mcs.{comp_suffix}.binary',
                                          # '-o', f'{model_name}.mcs.comp',
                                          '-d', f'{d}',
                                          '-t', f'{t}'
                 ]
+
+    if kwargs['do_compress']:
+        # count number of reactions after compression
+        infile = f'{model_name}.rfile_comp'
+
+        outfile = f'{model_name}.num_comp_rxns'
+
+        rxn = np.genfromtxt(os.path.join(path, infile), dtype=str)
+        rxn_cnt = np.char.count(rxn, '%') + 1
+
+        np.savetxt(os.path.join(path, outfile), rxn_cnt.reshape(1, -1), fmt='%g', delimiter=' ')
+
+        # wordcounter
+        nr_words = 0
+        with open(f'{model_name}.rfile', 'r') as f:
+            for line in f:
+                nr_words += len(line.split())
+
+        # additional compression arguments for PoF calculation
+        cmd_args += ['-c', f'{model_name}.num_{comp_suffix}_rxns',
+                     '-r', f'{nr_words}']
 
     if settings.DEBUG:
         subtask = SubTask.objects.filter(task_id=self.request.id)
@@ -463,7 +480,10 @@ def pofcalc(self, result, job_id, *args, **kwargs):
 
         if 'Final PoF' in out.splitlines()[-1]:
             # gets the result from the process output
-            pof_result = out.splitlines()[-1].split()[-1] # TODO convert to float?
+            try:
+                pof_result = round(float(out.splitlines()[-1].split()[-1]), 4)
+            except ValueError:
+                pof_result = out.splitlines()[-1].split()[-1]
             job = Job.objects.filter(id=job_id)
             job.update(result=pof_result)  # stores the string of the result
 

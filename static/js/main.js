@@ -18,4 +18,6 @@ $(document).ready(function () {
                                     placement: 'auto',
         }).popover('toggle');
     }
+
+
 });

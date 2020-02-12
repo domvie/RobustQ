@@ -33,23 +33,19 @@ timer = {}
 @receiver(post_save, sender=Job)
 def start_job(sender, instance, created, **kwargs):
     if created:
-        # instance.start_date = timezone.localtime(timezone.now())
-        # alternatively: post_save.disconnect(..)
-        # instance.save(update_fields=['start_date'])
         pass
-    # instance.refresh_from_db()
-    # result = run_training_method.delay()
+
     sender.objects.filter(id=instance.id).update(status='Queued')
-    # result = chain(cpu_test.s(),
-    #                cpu_test_two.s(job_id=instance.id),
-    #                update_db_post_run.s(job_id=instance.id)).apply_async(kwargs={'job_id':instance.id})
+
+    compression_checked = instance.compression
+    cardinality = instance.cardinality
 
     result = chain(sbml_processing.s(job_id=instance.id),
-                   compress_network.s(job_id=instance.id),
-                   create_dual_system.s(job_id=instance.id),
-                   defigueiredo.s(job_id=instance.id),
-                   mcs_to_binary.s(job_id=instance.id),
-                   pofcalc.s(job_id=instance.id),
+                   compress_network.s(job_id=instance.id, do_compress=compression_checked),
+                   create_dual_system.s(job_id=instance.id, do_compress=compression_checked),
+                   defigueiredo.s(job_id=instance.id, cardinality=cardinality, do_compress=compression_checked),
+                   mcs_to_binary.s(job_id=instance.id, do_compress=compression_checked),
+                   pofcalc.s(job_id=instance.id, cardinality=cardinality, do_compress=compression_checked),
                    update_db_post_run.s(job_id=instance.id),
                    ).apply_async(kwargs={'job_id':instance.id})
 
@@ -144,7 +140,6 @@ def task_prerun_handler(sender=None, task_id=None, task=None, *args, **kwargs):
     # task = SubTask.objects.filter(task_id=task_id)
 
     SubTask.objects.create(job=job, user=job.user, task_id=task_id, name=task.name, logfile_path=user_task_logfile_path)
-
 
 
 @task_postrun.connect

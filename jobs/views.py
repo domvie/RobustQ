@@ -17,6 +17,7 @@ from celery.contrib.abortable import AbortableAsyncResult
 import signal
 import os
 from django.utils import html
+from django.utils import timezone
 
 # @login_required
 # def new(request):
@@ -112,7 +113,7 @@ class JobDetailView(LoginRequiredMixin, UserPassesTestMixin, DetailView):
                     taskresult = TaskResult.objects.get(task_id=d['task_id'])
                     d['task_result'] = model_to_dict(taskresult, fields=['status', 'result'])
                     d['task_result']['result'] = taskresult.result
-                    d['task_result']['date_done'] = taskresult.date_done.strftime("%b %d %Y, %H:%M")
+                    d['task_result']['date_done'] = timezone.localtime(taskresult.date_done).strftime("%b %d %Y, %H:%M")
                 except Exception as e:
                     task = AsyncResult(d['task_id'])
                     d['status'] = task.status

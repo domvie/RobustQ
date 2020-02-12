@@ -31,6 +31,8 @@ class Job(models.Model):
     is_finished = models.BooleanField(default=False)
     finished_date = models.DateTimeField(blank=True, null=True)
     ip = models.GenericIPAddressField(null=True)
+    compression = models.BooleanField(default=True)
+    cardinality = models.IntegerField(default=2)
     # total_subtasks = models.IntegerField(null=True)
     reactions = models.IntegerField(null=True)
     metabolites = models.IntegerField(null=True)

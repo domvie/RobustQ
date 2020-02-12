@@ -13,15 +13,20 @@ class JobSubmissionForm(forms.ModelForm):
     #                                                                 message='Wrong file type!'), sbml_validator])
     class Meta:
         model = Job
-        fields = ['sbml_file']
+        fields = ['sbml_file', 'compression', 'cardinality']
 
     def __init__(self, *args, **kwargs):
         super(JobSubmissionForm, self).__init__(*args, **kwargs)
         self.fields['sbml_file'].widget.attrs.update({'class': 'custom-file-input',
                                                       'aria-describedby': 'id_sbml_file_Addon01',
                                                       'data-toggle': 'popover',
-                                                      'title': 'Error!',
+                                                      'title': 'Upload a valid model',
                                                       'data-content': ''})
+        self.fields['cardinality'].widget.attrs.update({'style': 'width: 3.5rem;',
+                                                        'min': '1',
+                                                        'max': '5',
+                                                        'value': '2',
+                                                        'step': '1'})
 
 
 class JobTable(tables.Table):
@@ -60,7 +65,7 @@ class JobTable(tables.Table):
 
     class Meta:
         model = Job
-        fields = ['id', 'start_date', 'sbml_file', 'status', 'finished_date', 'result',
+        fields = ['id', 'start_date', 'sbml_file', 'status', 'finished_date', 'result', 'compression', 'cardinality',
                   'details']
 
         attrs = {
