@@ -62,7 +62,7 @@ def call_repeatedly(secs, func, task_id, proc, logger):
 def cleanup_expired_results():
     """ """
     # objects older than x (default 14) days will be deleted
-    expired = timezone.now() - timedelta(days=settings['DAYS_UNTIL_JOB_DELETE'])
+    expired = timezone.now() - timedelta(days=settings.DAYS_UNTIL_JOB_DELETE)
     print(f'Deleting expired jobs. All jobs before {expired} will be deleted now.')
     jobs = Job.objects.filter(start_date__lt=expired, is_finished=True)
     for job in jobs:

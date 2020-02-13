@@ -55,14 +55,18 @@ class NewJobView(LoginRequiredMixin, CreateView):
 
 class JobOverView(LoginRequiredMixin, SingleTableView, ListView):
     # paginate_by = 10
-    model = Job
     template_name = 'jobs/overview.html'
     form_class = JobTable
     table_class = JobTable
 
+    def get_queryset(self):
+        """ Returns jobs that belong to the current user """
+        return self.request.user.job_set.all()
+
     def get_context_data(self, *, object_list=None, **kwargs):
         context = super().get_context_data(**kwargs)
         jobs = self.request.user.job_set.all()
+        # self.queryset = jobs
         self.table = JobTable(jobs)
         # table.paginate(self.request.GET.get("page", 1), per_page=25)
         # context['table'] = self.table
