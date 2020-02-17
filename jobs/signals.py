@@ -3,7 +3,7 @@ from django.dispatch import receiver
 from django.utils import timezone
 from jobs.models import Job, SubTask
 from .tasks import \
-    update_db_post_run, email_when_finished, \
+    update_db_post_run, send_result_email, \
     sbml_processing, \
     compress_network, \
     create_dual_system, \
@@ -47,7 +47,7 @@ def start_job(sender, instance, created, **kwargs):
                    mcs_to_binary.s(job_id=instance.id, do_compress=compression_checked),
                    pofcalc.s(job_id=instance.id, cardinality=cardinality, do_compress=compression_checked),
                    update_db_post_run.s(job_id=instance.id),
-                   email_when_finished.s(job_id=instance.id),
+                   send_result_email.s(job_id=instance.id),
                    ).apply_async(kwargs={'job_id':instance.id})
 
     parents = list()
@@ -57,9 +57,13 @@ def start_job(sender, instance, created, **kwargs):
         result = result.parent  # parents is now a list of tasks in the chain
 
 
+excluded_tasks = ['jobs.tasks.cleanup_expired_results', 'update_db', 'result_email']
+
+
 @receiver(post_save, sender=TaskResult)
 def add_task_info(sender, instance, created, **kwargs):
     """ connects TaskResult and SubTask """
+
     task = SubTask.objects.filter(task_id=instance.task_id)
     if task:
         task.update(task_result=instance)
@@ -67,37 +71,19 @@ def add_task_info(sender, instance, created, **kwargs):
         pass
 
 
-@receiver(post_delete, sender=Job)
-def after_delete(sender, instance, **kwargs):
-    print('After Django delete signal')
-
-
-@after_task_publish.connect
-def task_publish_handler(sender=None, headers=None, body=None, **kwargs):
-    # information about task are located in headers for task messages
-    # using the task protocol version 2.
-    info = headers if 'task' in headers else body
-    # print('after task publish for task id {info[id]}'.format(
-    #     info=info,
-    # ))
-    # task = SubTask.objects.filter(task_id=info[id])
-    # task.update(status_task='RECEIVED')
-
-
 @task_prerun.connect
 def task_prerun_handler(sender=None, task_id=None, task=None, *args, **kwargs):
-    if sender.name == 'jobs.tasks.cleanup_expired_results':
+    if sender.name in excluded_tasks:
         return
-
-    print(f'PRERUN handler setting up logging for {task_id}, {task}, sender {sender}')
 
     cache.set("current_task", task_id, timeout=None) # TODO - doesnt always target correct task
 
     timer[task_id] = time()
     job_id = kwargs['kwargs']['job_id']
     job_qs = Job.objects.filter(id=job_id)
-    job_qs.update(status="Started")
     job = job_qs.get()
+    if job.status is not "Done":
+        job_qs.update(status="Started")
 
     fpath = job.sbml_file.path
     path = os.path.dirname(fpath)
@@ -149,6 +135,9 @@ def task_prerun_handler(sender=None, task_id=None, task=None, *args, **kwargs):
 
 @task_postrun.connect
 def task_postrun_handler(sender, task_id, task, retval, state, *args,  **kwargs):
+    if sender.name in excluded_tasks:
+        return
+
     print(f'{task_id} exited with status {state}')
     try:
         cost = time() - timer.pop(task_id)

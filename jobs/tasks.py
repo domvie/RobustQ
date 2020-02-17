@@ -99,7 +99,7 @@ def setup_process(self, result, job_id, *args, **kwargs):
     return logger, fpath, path, fname, model_name, extension
 
 
-@shared_task(bind=True)
+@shared_task(bind=True, name="update_db")
 def update_db_post_run(self, result=None, job_id=None, *args, **kwargs):
     job = Job.objects.filter(id=job_id)
     finished_date = timezone.now()
@@ -111,17 +111,19 @@ def update_db_post_run(self, result=None, job_id=None, *args, **kwargs):
     job.update(is_finished=True, finished_date=finished_date, status="Done", result=result, duration=duration)
 
 
-@shared_task(bind=True)
-def email_when_finished(self, result=None, job_id=None, *args, **kwargs):
+@shared_task(bind=True, name="result_email")
+def send_result_email(self, result, job_id=None, *args, **kwargs):
     job = Job.objects.get(id=job_id)
+
     print(f'Trying to send email to {job.user.email}')
-    message = f'Dear {job.user}, \n\n your RobustQ job has just finished (total time: {job.duration}). The task finished ' \
-              f'with result {job.result} and status {job.status}. \nThank you for using our service.'
+    message = f'Dear {job.user}, \n\nyour RobustQ job has just finished after {job.duration}. \n' \
+              f'The task finished with result PoF={job.result} and status {job.status}. ' \
+              f'\nThank you for using our service!'
     try:
         send_mail(
             'Your RobustQ job has finished',
-            'robustq.info@gmail.com',
             message,
+            'robustq.info@gmail.com',
             [job.user.email]
         )
     except Exception as e:
