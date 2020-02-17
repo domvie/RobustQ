@@ -102,17 +102,20 @@ def setup_process(self, result, job_id, *args, **kwargs):
 @shared_task(bind=True)
 def update_db_post_run(self, result=None, job_id=None, *args, **kwargs):
     job = Job.objects.filter(id=job_id)
-    job.update(is_finished=True, finished_date=timezone.now(), status="Done", result=result)
+    finished_date = timezone.now()
+    duration = finished_date - job.get().start_date
+    hours, remainder = divmod(duration.total_seconds(), 3600)
+    minutes, seconds = divmod(remainder, 60)
+    duration = '{:02}:{:02}:{:02}'.format(int(hours), int(minutes), int(seconds))
+
+    job.update(is_finished=True, finished_date=finished_date, status="Done", result=result, duration=duration)
 
 
 @shared_task(bind=True)
 def email_when_finished(self, result=None, job_id=None, *args, **kwargs):
     job = Job.objects.get(id=job_id)
-    hours, remainder = divmod((job.finished_date - job.start_date).total_seconds(), 3600)
-    minutes, seconds = divmod(remainder, 60)
-    duration = '{:02}:{:02}:{:02}'.format(int(hours), int(minutes), int(seconds))
     print(f'Trying to send email to {job.user.email}')
-    message = f'Dear {job.user}, \n\n your RobustQ job has just finished (total time: {duration}). The task finished ' \
+    message = f'Dear {job.user}, \n\n your RobustQ job has just finished (total time: {job.duration}). The task finished ' \
               f'with result {job.result} and status {job.status}. \nThank you for using our service.'
     try:
         send_mail(

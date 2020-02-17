@@ -58,14 +58,33 @@ class JobTable(tables.Table):
         except TypeError as te:
             return '—'
 
+    def render_duration(self, value):
+        if value is None:
+            return '—'
+        try:
+            hours, remainder = divmod(value.total_seconds(), 3600)
+            minutes, seconds = divmod(remainder, 60)
+            duration = '{:02}:{:02}:{:02}'.format(int(hours), int(minutes), int(seconds))
+            return duration
+        except Exception:
+            return value
+
+    def render_result(self, value):
+        if value is None:
+            return '—'
+        try:
+            return round(float(value), 4)
+        except:
+            return value
+
     id = tables.LinkColumn('details', args=[tables.utils.A('pk')], text=lambda record: record.pk)
     details = tables.TemplateColumn(template_name="jobs/tables/details.html", extra_context={'label': 'Details'},
                                     verbose_name='')
 
     class Meta:
         model = Job
-        fields = ['id', 'start_date', 'sbml_file', 'status', 'finished_date', 'result', 'compression', 'cardinality',
-                  'details']
+        fields = ['id', 'start_date', 'sbml_file', 'status', 'finished_date', 'compression', 'cardinality', 'result',
+                  'duration', 'details']
 
         attrs = {
             'class': 'table table-sm table-striped table-hover',
