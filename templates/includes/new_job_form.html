@@ -1,23 +1,14 @@
-<style type="text/css">
-    #pageloader
-{
-  background: rgba( 255, 255, 255, 0.8 );
-  display: none;
-  height: 100%;
-  position: fixed;
-  width: 100%;
-  z-index: 9999;
-}
+<script>
+    function submit_this_form() {
+        $('#jobform').submit(function(e) {
+            console.log(e);
+            $('#jobsubmitbtn').hide();
+            $('#pageloader').show();
+        });
+    }
 
-#pageloader img
-{
-  left: 50%;
-  margin-left: -32px;
-  margin-top: -32px;
-  position: absolute;
-  top: 50%;
-}
-</style>
+
+</script>
 
 <div class="container row" id="form_id">
     <div class="col-12">
@@ -69,9 +60,9 @@
                       <option value="4">
                     </datalist>
 
-                <button class="btn btn-outline-info" id="jobsubmitbtn" type="submit">Submit</button>
-                    <div id="pageloader">
-                       <img src="http://cdnjs.cloudflare.com/ajax/libs/semantic-ui/0.16.1/images/loader-large.gif" alt="processing..." />
+                <button class="btn btn-outline-info" id="jobsubmitbtn" onclick='submit_this_form()'>Submit</button>
+                    <div id="pageloader" style="display: none;" class="row inline-block align-content-center">
+                         <i class="fas fa-spinner fa-spin fa-2x text-info p-1 ml-3"></i><div class="text text-info p-2"> Uploading and validating file, please wait..</div>
                     </div>
                 </div>
         </form>

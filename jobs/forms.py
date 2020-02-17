@@ -20,7 +20,6 @@ class JobSubmissionForm(forms.ModelForm):
         self.fields['sbml_file'].widget.attrs.update({'class': 'custom-file-input',
                                                       'aria-describedby': 'id_sbml_file_Addon01',
                                                       'data-toggle': 'popover',
-                                                      'title': 'Upload a valid model',
                                                       'data-content': ''})
         self.fields['cardinality'].widget.attrs.update({'style': 'width: 3.5rem;',
                                                         'min': '1',

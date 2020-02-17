@@ -3,7 +3,7 @@ from django.dispatch import receiver
 from django.utils import timezone
 from jobs.models import Job, SubTask
 from .tasks import \
-    update_db_post_run, \
+    update_db_post_run, email_when_finished, \
     sbml_processing, \
     compress_network, \
     create_dual_system, \
@@ -47,6 +47,7 @@ def start_job(sender, instance, created, **kwargs):
                    mcs_to_binary.s(job_id=instance.id, do_compress=compression_checked),
                    pofcalc.s(job_id=instance.id, cardinality=cardinality, do_compress=compression_checked),
                    update_db_post_run.s(job_id=instance.id),
+                   email_when_finished.s(job_id=instance.id),
                    ).apply_async(kwargs={'job_id':instance.id})
 
     parents = list()
@@ -54,7 +55,6 @@ def start_job(sender, instance, created, **kwargs):
     while result.parent:
         parents.append(result.parent)
         result = result.parent  # parents is now a list of tasks in the chain
-    sender.objects.filter(id=instance.id).update(start_date=timezone.now())
 
 
 @receiver(post_save, sender=TaskResult)
@@ -91,13 +91,13 @@ def task_prerun_handler(sender=None, task_id=None, task=None, *args, **kwargs):
 
     print(f'PRERUN handler setting up logging for {task_id}, {task}, sender {sender}')
 
-    cache.set("current_task", task_id, timeout=None)
+    cache.set("current_task", task_id, timeout=None) # TODO - doesnt always target correct task
 
     timer[task_id] = time()
     job_id = kwargs['kwargs']['job_id']
-    job = Job.objects.filter(id=job_id)
-    job.update(status="Started")
-    job = job.get()
+    job_qs = Job.objects.filter(id=job_id)
+    job_qs.update(status="Started")
+    job = job_qs.get()
 
     fpath = job.sbml_file.path
     path = os.path.dirname(fpath)
@@ -125,10 +125,15 @@ def task_prerun_handler(sender=None, task_id=None, task=None, *args, **kwargs):
     task_handler.setLevel(logging.INFO)
 
     # Adding second File Handle with file path. Filename is task_id
-    public_user_path = os.path.join(public_logs, os.path.relpath(path_logs))
-    if not os.path.exists(public_user_path):
-        os.makedirs(public_user_path)
-    user_task_logfile_path = os.path.join(public_user_path, task.name+'.log')
+    if not job.public_path:
+        public_user_path = os.path.join(public_logs, os.path.relpath(path_logs))
+        job_qs.update(public_path=public_user_path)
+        if not os.path.exists(public_user_path):
+            os.makedirs(public_user_path)
+
+        user_task_logfile_path = os.path.join(public_user_path, task.name+'.log')
+    else:
+        user_task_logfile_path = os.path.join(job.public_path, task.name+'.log')
     public_log_handler = logging.FileHandler(user_task_logfile_path)
     public_log_handler.setFormatter(formatter)
     public_log_handler.setLevel(logging.INFO)
@@ -169,4 +174,3 @@ def task_failure_handler(sender=None, task_id=None, exception=None, *args, **kwa
     job.update(status="Failure", is_finished=True)
     logger = get_task_logger(task_id)
     logger.error(f'Task {task_id} failed. Exception: {exception}')
-

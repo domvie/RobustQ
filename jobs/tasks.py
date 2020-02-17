@@ -25,7 +25,7 @@ import threading
 from .custom_wraps import revoke_chain_authority, RevokeChainRequested
 from django.conf import settings
 import io
-
+from django.core.mail import send_mail
 
 BASE_DIR = os.getcwd()
 
@@ -58,7 +58,7 @@ def call_repeatedly(secs, func, task_id, proc, logger):
         func(task_id, proc, logger)
 
 
-@app.task
+@app.task(ignore_result=True)
 def cleanup_expired_results():
     """ """
     # objects older than x (default 14) days will be deleted
@@ -105,6 +105,26 @@ def update_db_post_run(self, result=None, job_id=None, *args, **kwargs):
     job.update(is_finished=True, finished_date=timezone.now(), status="Done", result=result)
 
 
+@shared_task(bind=True)
+def email_when_finished(self, result=None, job_id=None, *args, **kwargs):
+    job = Job.objects.get(id=job_id)
+    hours, remainder = divmod((job.finished_date - job.start_date).total_seconds(), 3600)
+    minutes, seconds = divmod(remainder, 60)
+    duration = '{:02}:{:02}:{:02}'.format(int(hours), int(minutes), int(seconds))
+    print(f'Trying to send email to {job.user.email}')
+    message = f'Dear {job.user}, \n\n your RobustQ job has just finished (total time: {duration}). The task finished ' \
+              f'with result {job.result} and status {job.status}. \nThank you for using our service.'
+    try:
+        send_mail(
+            'Your RobustQ job has finished',
+            'robustq.info@gmail.com',
+            message,
+            [job.user.email]
+        )
+    except Exception as e:
+        print('Failed to send email: ', repr(e))
+
+
 @shared_task(bind=True, name="SBML_processing")
 def sbml_processing(self, job_id=None, *args, **kwargs):
     """ """
@@ -114,7 +134,10 @@ def sbml_processing(self, job_id=None, *args, **kwargs):
 
     logger, fpath, path, fname, model_name, extension = setup_process(self, job_id=job_id, result=None, *args, **kwargs)
 
-    logger.info(f'Trying load SBML model {fname} in directory {path}')
+    #  Set start date to now
+    Job.objects.filter(id=job_id).update(start_date=timezone.now())
+
+    logger.info(f'Trying to load SBML model {fname} in directory {path}')
 
     if extension == '.json':
         m = cobra.io.load_json_model(fpath)

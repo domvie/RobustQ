@@ -100,13 +100,17 @@ class JobDetailView(LoginRequiredMixin, UserPassesTestMixin, DetailView):
                 d.pop('job')
 
                 d['logfile'] = {}
+                try:
+                    with open(d['logfile_path'], 'r') as l:
+                        d['logfile']['logdata'] = l.readlines()
 
-                with open(d['logfile_path'], 'r') as l:
-                    d['logfile']['logdata'] = l.readlines()
+                    l.close()
 
-                l.close()
+                    d['logfile']['path'] = '/' + os.path.relpath(d.pop('logfile_path'))  # settings.STATIC_URL + os.path.join(fpath, f'logs/{d["name"]}.log')
 
-                d['logfile']['path'] = '/' + os.path.relpath(d.pop('logfile_path'))  # settings.STATIC_URL + os.path.join(fpath, f'logs/{d["name"]}.log')
+                except TypeError:
+                    d['logfile']['logdata'] = 'Could not load logfile'
+
                 # if d.get('task_result'):
                 #     d.update(('task_result', model_to_dict(task.task_result, fields=['status', 'name'])) for task in subtasks)
                     # d['task_result']['task_name'] = d['task_result']['task_name'].split('.')[-1]

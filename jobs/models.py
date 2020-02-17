@@ -40,6 +40,8 @@ class Job(models.Model):
     objective_expression = models.CharField(max_length=100, null=True)
     status = models.CharField(max_length=20, null=True, default='Queued')
     result = models.CharField(max_length=50, null=True)
+    public_path = models.FilePathField(null=True, max_length=250)
+    # model_name = models.CharField(max_length=50, null=True)
     sbml_file = ContentTypeRestrictedFileField(upload_to=user_directory_path, content_types=['text/xml', 'application/json',
                                                                                              'text/sbml'],
                                  validators=[FileExtensionValidator(allowed_extensions=['sbml', 'xml', 'json'],
@@ -54,7 +56,7 @@ class SubTask(models.Model):
     """connects Job - User - TaskResult models """
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     job = models.ForeignKey(Job, on_delete=models.CASCADE)
-    task_result = models.OneToOneField(TaskResult, on_delete=models.CASCADE, null=True) # TODO maybe change cascade?
+    task_result = models.OneToOneField(TaskResult, null=True, on_delete=models.DO_NOTHING)  # TODO maybe change cascade?
     task_id = models.CharField(max_length=50, null=False, unique=True)
     name = models.CharField(max_length=70, null=True)
     command_arguments = models.CharField(max_length=1000, null=True)

@@ -13,6 +13,7 @@
 {#    <link rel="stylesheet" href="{% static "css/main.css" %}">#}
     <meta charset="UTF-8">
     <title>{% block title %}RobustQ - a web service to quantify cellular robustness{% endblock title %}</title>
+    <script src="{% static 'js/jquery-3.4.1.min.js' %} "></script>
 
 </head>
 <body class="bg-light">
@@ -37,10 +38,11 @@
     <!-- end content -->
     <!-- JavaScript imports -->
     <!-- jQuery first, then Popper.js, then Bootstrap JS -->
-    <script src="{% static 'js/jquery-3.4.1.min.js' %} "></script>
     <script src="{% static 'bootstrap/js/bootstrap.bundle.js' %}"></script>
     <script src="{% static 'js/bs-custom-file-input.js' %}"></script>
     <script src="{% static 'js/cancel.js' %}"></script>
+    <script src="{% static 'js/main.js' %}"></script>
+
     <script>
         $(document).ready(function () {
             bsCustomFileInput.init();
@@ -57,11 +59,16 @@
                 errors = errors.filter(function(el) {
                     return el !== "";}
                     );
-                $('#id_sbml_file').popover({
+                $('#id_sbml_file').popover({ title: 'Error! <span class="close-popover float-right text-secondary"><i class="fas fa-times"></i></span>',
                                             content: '<ul class="pl-3 pb-0"><li>' + errors.join('</li><li>') + '</li></ul>',
                                             html: true,
-                                            placement: 'bottom',
+                                            placement: 'bottom'
                 }).popover('toggle');
+
+                    $(document).on('click','.close-popover',function(){
+                      $('#id_sbml_file').popover('hide');
+                    });
+
             }
         });
     </script>
