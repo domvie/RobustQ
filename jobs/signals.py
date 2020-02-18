@@ -9,7 +9,7 @@ from .tasks import \
     create_dual_system, \
     defigueiredo, \
     mcs_to_binary, \
-    pofcalc
+    pofcalc, execute_pipeline
 from django_celery_results.models import TaskResult
 from celery.signals import task_postrun, after_task_publish, task_prerun, task_failure
 from celery import chain
@@ -37,24 +37,11 @@ def start_job(sender, instance, created, **kwargs):
 
     sender.objects.filter(id=instance.id).update(status='Queued')
 
+    id = instance.id
     compression_checked = instance.compression
     cardinality = instance.cardinality
 
-    result = chain(sbml_processing.s(job_id=instance.id),
-                   compress_network.s(job_id=instance.id, do_compress=compression_checked),
-                   create_dual_system.s(job_id=instance.id, do_compress=compression_checked),
-                   defigueiredo.s(job_id=instance.id, cardinality=cardinality, do_compress=compression_checked),
-                   mcs_to_binary.s(job_id=instance.id, do_compress=compression_checked),
-                   pofcalc.s(job_id=instance.id, cardinality=cardinality, do_compress=compression_checked),
-                   update_db_post_run.s(job_id=instance.id),
-                   send_result_email.s(job_id=instance.id),
-                   ).apply_async(kwargs={'job_id':instance.id})
-
-    parents = list()
-    parents.append(result)
-    while result.parent:
-        parents.append(result.parent)
-        result = result.parent  # parents is now a list of tasks in the chain
+    execute_pipeline.delay(job_id=id, compression_checked=compression_checked, cardinality=cardinality)
 
 
 excluded_tasks = ['jobs.tasks.cleanup_expired_results', 'update_db', 'result_email']

@@ -18,6 +18,7 @@ import logging
 import numpy as np
 from django.core.cache import cache
 import shutil
+from celery import chain
 from celery.schedules import crontab
 from celery.contrib.abortable import AbortableTask, AbortableAsyncResult
 from celery.result import AsyncResult
@@ -528,3 +529,27 @@ def pofcalc(self, result, job_id, cardinality, *args, **kwargs):
     else:
         return float(pof_result) if pof_result else pofcalc_process.returncode
 
+
+@shared_task(bind=True, name="execute_pipeline", base=AbortableTask)
+def execute_pipeline(self, job_id, compression_checked, cardinality, *args, **kwargs):
+
+    result = chain(sbml_processing.s(job_id=job_id),
+                   compress_network.s(job_id=job_id, do_compress=compression_checked),
+                   create_dual_system.s(job_id=job_id, do_compress=compression_checked),
+                   defigueiredo.s(job_id=job_id, cardinality=cardinality, do_compress=compression_checked),
+                   mcs_to_binary.s(job_id=job_id, do_compress=compression_checked),
+                   pofcalc.s(job_id=job_id, cardinality=cardinality, do_compress=compression_checked),
+                   update_db_post_run.s(job_id=job_id),
+                   send_result_email.s(job_id=job_id),
+                   ).apply_async()
+
+    return result
+
+    # parents = list()
+    # parents.append(result)
+    # while result.parent:
+    #     parents.append(result.parent) # parents is now a list of tasks in the chain
+
+    # while not result.ready():
+    #     time.sleep(5)
+    #     print('Result not ready')
