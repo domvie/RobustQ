@@ -28,6 +28,7 @@ from django.conf import settings
 import io
 from django.core.mail import send_mail
 
+
 BASE_DIR = os.getcwd()
 
 
@@ -541,9 +542,9 @@ def execute_pipeline(self, job_id, compression_checked, cardinality, *args, **kw
                    pofcalc.s(job_id=job_id, cardinality=cardinality, do_compress=compression_checked),
                    update_db_post_run.s(job_id=job_id),
                    send_result_email.s(job_id=job_id),
-                   ).apply_async()
+                   )
 
-    return result
+    return result()
 
     # parents = list()
     # parents.append(result)
@@ -553,3 +554,5 @@ def execute_pipeline(self, job_id, compression_checked, cardinality, *args, **kw
     # while not result.ready():
     #     time.sleep(5)
     #     print('Result not ready')
+
+
