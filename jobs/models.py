@@ -42,6 +42,7 @@ class Job(models.Model):
     result = models.CharField(max_length=50, null=True)
     public_path = models.FilePathField(null=True, max_length=250)
     duration = models.CharField(null=True, max_length=15)
+    task_id_job = models.CharField(max_length=50, null=True)
     # model_name = models.CharField(max_length=50, null=True)
     sbml_file = ContentTypeRestrictedFileField(upload_to=user_directory_path, content_types=['text/xml', 'application/json',
                                                                                              'text/sbml'],

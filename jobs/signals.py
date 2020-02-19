@@ -2,16 +2,9 @@ from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
 from django.utils import timezone
 from jobs.models import Job, SubTask
-from .tasks import \
-    update_db_post_run, send_result_email, \
-    sbml_processing, \
-    compress_network, \
-    create_dual_system, \
-    defigueiredo, \
-    mcs_to_binary, \
-    pofcalc, execute_pipeline
+from .tasks import execute_pipeline
 from django_celery_results.models import TaskResult
-from celery.signals import task_postrun, after_task_publish, task_prerun, task_failure
+from celery.signals import task_postrun, after_task_publish, task_prerun, task_failure, celeryd_init
 from celery import chain
 from celery.result import AsyncResult
 import os
@@ -41,10 +34,15 @@ def start_job(sender, instance, created, **kwargs):
     compression_checked = instance.compression
     cardinality = instance.cardinality
 
-    execute_pipeline.delay(job_id=id, compression_checked=compression_checked, cardinality=cardinality)
+    execute_pipeline.apply_async(kwargs={'job_id':id,
+                                         'compression_checked':compression_checked,
+                                         'cardinality':cardinality},
+                                 queue='jobs')
+
+    # TODO ideas: databasetable with queue, queues, improved lock mechanism,
 
 
-excluded_tasks = ['jobs.tasks.cleanup_expired_results', 'update_db', 'result_email']
+excluded_tasks = ['jobs.tasks.cleanup_expired_results', 'update_db', 'result_email', 'release_lock']
 
 
 @receiver(post_save, sender=TaskResult)
@@ -63,14 +61,15 @@ def task_prerun_handler(sender=None, task_id=None, task=None, *args, **kwargs):
     if sender.name in excluded_tasks:
         return
 
-    cache.set("current_task", task_id, timeout=None) # TODO - doesnt always target correct task
-
     timer[task_id] = time()
     job_id = kwargs['kwargs']['job_id']
     job_qs = Job.objects.filter(id=job_id)
     job = job_qs.get()
     if job.status is not "Done":
         job_qs.update(status="Started")
+
+    cache.set("current_task", task_id, timeout=None) # TODO - doesnt always target correct task
+    cache.set('current_job', job_id, timeout=None)
 
     fpath = job.sbml_file.path
     path = os.path.dirname(fpath)
@@ -141,6 +140,8 @@ def task_postrun_handler(sender, task_id, task, retval, state, *args,  **kwargs)
         handler.flush()
         handler.close()
     logger.handlers = []
+    if task.__name__ == 'execute_pipeline':
+        cache.delete('running_job')
 
 
 @task_failure.connect
@@ -150,3 +151,10 @@ def task_failure_handler(sender=None, task_id=None, exception=None, *args, **kwa
     job.update(status="Failure", is_finished=True)
     logger = get_task_logger(task_id)
     logger.error(f'Task {task_id} failed. Exception: {exception}')
+    cache.delete('running_job')
+
+
+@celeryd_init.connect
+def worker_init(sender, instance, conf, options, **kwargs):
+    print(conf)
+    cache.delete('running_job')

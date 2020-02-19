@@ -531,8 +531,25 @@ def pofcalc(self, result, job_id, cardinality, *args, **kwargs):
         return float(pof_result) if pof_result else pofcalc_process.returncode
 
 
+@shared_task(bind=True, name="release_lock")
+def release_lock(self, *args, **kwargs):
+    cache.delete("running_job")
+
+
 @shared_task(bind=True, name="execute_pipeline", base=AbortableTask)
 def execute_pipeline(self, job_id, compression_checked, cardinality, *args, **kwargs):
+    logger, fpath, path, fname, model_name, extension = setup_process(self, job_id=job_id, result=None, *args,
+                                                                      **kwargs)
+
+    Job.objects.filter(id=job_id).update(task_id_job=self.request.id)
+    # TODO try out other mechanism for concurrency
+    # while cache.get('running_job'):
+    #     if cache.get('running_job') == job_id:
+    #         break
+    #     time.sleep(5)  #  check every 5 secs if other jobs are finished
+
+    # cache.set('running_job', job_id, timeout=10000)
+    # logger.info(f'Setting cache lock to {job_id}')
 
     result = chain(sbml_processing.s(job_id=job_id),
                    compress_network.s(job_id=job_id, do_compress=compression_checked),
@@ -541,10 +558,17 @@ def execute_pipeline(self, job_id, compression_checked, cardinality, *args, **kw
                    mcs_to_binary.s(job_id=job_id, do_compress=compression_checked),
                    pofcalc.s(job_id=job_id, cardinality=cardinality, do_compress=compression_checked),
                    update_db_post_run.s(job_id=job_id),
-                   send_result_email.s(job_id=job_id),
-                   )
+                   release_lock.s(),
+                   send_result_email.s(job_id=job_id)
+                   ).apply_async()
 
-    return result()
+    logger.info('finished')
+
+    # # TODO or like while result.ready() blabla?
+    # while not result.ready():
+    #     time.sleep(1)
+
+    return result.successful()
 
     # parents = list()
     # parents.append(result)
@@ -556,3 +580,13 @@ def execute_pipeline(self, job_id, compression_checked, cardinality, *args, **kw
     #     print('Result not ready')
 
 
+@shared_task(bind=True, name='testjob')
+def testjob(self, nr_jobs=3, user_id=2, job_start=270, *args, **kwargs):
+    from users.models import User
+
+    user = User.objects.get(id=user_id)
+    highest_job_nr = Job.objects.all().order_by('-id').first().id
+    print(f'Using files from Job {highest_job_nr}')
+    for i in range(nr_jobs):
+        sbml_dummy = Job.objects.get(id=job_start+i).sbml_file
+        Job.objects.create(user=user, sbml_file=sbml_dummy)
