@@ -564,9 +564,8 @@ def execute_pipeline(self, job_id, compression_checked, cardinality, *args, **kw
 
     logger.info('finished')
 
-    # # TODO or like while result.ready() blabla?
-    # while not result.ready():
-    #     time.sleep(1)
+    while not result.ready():  # this blocks the worker from starting another task before the previous one has finished
+        time.sleep(1)
 
     return result.successful()
 
