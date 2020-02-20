@@ -27,9 +27,23 @@ from .custom_wraps import revoke_chain_authority, RevokeChainRequested
 from django.conf import settings
 import io
 from django.core.mail import send_mail
+from io import StringIO
 
 
 BASE_DIR = os.getcwd()
+
+
+class Capturing(list):
+    """Captures stdout of certain functions and saves them in a list"""
+    def __enter__(self):
+        self._stdout = sys.stdout
+        sys.stdout = self._stringio = StringIO()
+        return self
+
+    def __exit__(self, *args):
+        self.extend(self._stringio.getvalue())
+        del self._stringio    # free up some memory
+        sys.stdout = self._stdout
 
 
 def log_subprocess_output(pipe, logger=None):
@@ -149,7 +163,10 @@ def sbml_processing(self, job_id=None, *args, **kwargs):
     if extension == '.json':
         m = cobra.io.load_json_model(fpath)
     elif extension == '.xml' or extension == '.sbml':
-        m = cobra.io.read_sbml_model(fpath)
+        with Capturing() as output:  # TODO not working
+            m = cobra.io.read_sbml_model(fpath)
+        if output:
+            logger.info(output)
     else:
         logger.error(f'ERROR: input file ({fname}) missing matching extension (.json/.xml/.sbml)')
         raise Exception(f'ERROR: input file ({fname}) missing matching extension (.json/.xml/.sbml)')
@@ -536,6 +553,13 @@ def release_lock(self, *args, **kwargs):
     cache.delete("running_job")
 
 
+@shared_task(bind=True, name="abort_task", ignore_result=True)
+def abort_task(self, *args, **kwargs):
+    res = AbortableAsyncResult(kwargs['t_id'])
+    res.revoke()
+    res.abort()
+
+
 @shared_task(bind=True, name="execute_pipeline", base=AbortableTask)
 def execute_pipeline(self, job_id, compression_checked, cardinality, *args, **kwargs):
     logger, fpath, path, fname, model_name, extension = setup_process(self, job_id=job_id, result=None, *args,
@@ -560,23 +584,35 @@ def execute_pipeline(self, job_id, compression_checked, cardinality, *args, **kw
                    update_db_post_run.s(job_id=job_id),
                    release_lock.s(),
                    send_result_email.s(job_id=job_id)
-                   ).apply_async()
+                   ).on_error(abort_task.s(t_id=self.request.id)).apply_async()
 
-    logger.info('finished')
+    cache.set('current_chain', result.task_id, timeout=40000)
+    logger.info(result.task_id)
 
+    copy = result
+    parents = list()
+    parents.append(copy)
+    while copy.parent:
+        parents.append(copy.parent)
+        copy = copy.parent
+    logger.info(parents)
+
+    this_result = AbortableAsyncResult(self.request.id)
     while not result.ready():  # this blocks the worker from starting another task before the previous one has finished
+        for parent in parents:
+            if parent.status == 'FAILURE':
+                try:
+                    name = parent._cache['task_name']
+                except:
+                    name = None
+                logger.error(f'Task {parent.id}, {name} failed!')
+                return result.task_id
+        if this_result.is_aborted() or this_result.status == 'REVOKED':
+            break
+
         time.sleep(1)
 
-    return result.successful()
-
-    # parents = list()
-    # parents.append(result)
-    # while result.parent:
-    #     parents.append(result.parent) # parents is now a list of tasks in the chain
-
-    # while not result.ready():
-    #     time.sleep(5)
-    #     print('Result not ready')
+    return result.task_id
 
 
 @shared_task(bind=True, name='testjob')

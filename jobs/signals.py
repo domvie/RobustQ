@@ -42,7 +42,8 @@ def start_job(sender, instance, created, **kwargs):
     # TODO ideas: databasetable with queue, queues, improved lock mechanism,
 
 
-excluded_tasks = ['jobs.tasks.cleanup_expired_results', 'update_db', 'result_email', 'release_lock']
+excluded_tasks = ['jobs.tasks.cleanup_expired_results', 'update_db', 'result_email', 'release_lock',
+                  'abort_task']
 
 
 @receiver(post_save, sender=TaskResult)
@@ -135,7 +136,6 @@ def task_postrun_handler(sender, task_id, task, retval, state, *args,  **kwargs)
     # getting the same logger created in prerun handler and closilogging.getLoggerng all handles associated with it
     logger = get_task_logger(task_id)
     logger.info("%s ran for %s", task.__name__, str(datetime.timedelta(seconds=cost)))
-    logger.info(f'Task {task_id} finished with state {state} and returned {retval}')
     for handler in logger.handlers:
         handler.flush()
         handler.close()
@@ -156,5 +156,4 @@ def task_failure_handler(sender=None, task_id=None, exception=None, *args, **kwa
 
 @celeryd_init.connect
 def worker_init(sender, instance, conf, options, **kwargs):
-    print(conf)
     cache.delete('running_job')

@@ -22,12 +22,12 @@ def revoke_chain_authority(a_shared_task):
             return a_shared_task(self, *args, **kwargs)
         except RevokeChainRequested as e:
             # Drop subsequent tasks in chain (if not EAGER mode)
-            if self.request.callbacks:
-                self.request.callbacks = None
-            if self.request.chain:
-                self.request.chain = None
-            res = AsyncResult(self.request.id)
-            res.revoke()
+            # if self.request.callbacks:
+            #     self.request.callbacks = None
+            # if self.request.chain:
+            #     self.request.chain = None
+            # res = AsyncResult(self.request.id)
+            # res.revoke()
             logger = get_task_logger(self.request.id)
             logger.error(e.return_value)
             raise e
