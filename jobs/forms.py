@@ -13,7 +13,7 @@ class JobSubmissionForm(forms.ModelForm):
     #                                                                 message='Wrong file type!'), sbml_validator])
     class Meta:
         model = Job
-        fields = ['sbml_file', 'compression', 'cardinality']
+        fields = ['sbml_file', 'compression', 'cardinality', 'make_consistent']
 
     def __init__(self, *args, **kwargs):
         super(JobSubmissionForm, self).__init__(*args, **kwargs)
@@ -83,8 +83,8 @@ class JobTable(tables.Table):
 
     class Meta:
         model = Job
-        fields = ['id', 'start_date', 'sbml_file', 'status', 'finished_date', 'compression', 'cardinality', 'result',
-                  'duration', 'details']
+        fields = ['id', 'status', 'sbml_file', 'start_date', 'compression', 'cardinality',
+                  'make_consistent', 'result', 'duration', 'details']
 
         attrs = {
             'class': 'table table-sm table-striped table-hover',

@@ -33,6 +33,7 @@ class Job(models.Model):
     ip = models.GenericIPAddressField(null=True)
     compression = models.BooleanField(default=True)
     cardinality = models.IntegerField(default=2)
+    make_consistent = models.BooleanField(default=False)
     # total_subtasks = models.IntegerField(null=True)
     reactions = models.IntegerField(null=True)
     metabolites = models.IntegerField(null=True)
@@ -43,6 +44,7 @@ class Job(models.Model):
     public_path = models.FilePathField(null=True, max_length=250)
     duration = models.CharField(null=True, max_length=15)
     task_id_job = models.CharField(max_length=50, null=True)
+    model_name = models.CharField(max_length=50, null=True)
     # model_name = models.CharField(max_length=50, null=True)
     sbml_file = ContentTypeRestrictedFileField(upload_to=user_directory_path, content_types=['text/xml', 'application/json',
                                                                                              'text/sbml'],
@@ -63,3 +65,4 @@ class SubTask(models.Model):
     name = models.CharField(max_length=70, null=True)
     command_arguments = models.CharField(max_length=1000, null=True)
     logfile_path = models.FilePathField(null=True, max_length=250)
+    duration = models.CharField(null=True, max_length=25)

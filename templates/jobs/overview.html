@@ -17,6 +17,20 @@
             <div class="card-body">
                 <div class="py-2 pt-3 container">
                 <a href="{% url 'new' %}" class="btn btn-sm btn-outline-info">New <i class="fas fa-plus-square"></i></a>
+                <div class="dropdown d-inline-flex float-right">
+                      <a class="btn btn-sm border btn-light dropdown-toggle py-1" type="button" id="dropdownMenuButton"
+                              data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                         <i class="fas fa-file-download"></i> Download results
+                      </a>
+                      <div class="dropdown-menu" aria-labelledby="dropdownMenuButton">
+                        <a href="{% url 'download_results' 'csv' %}" class="dropdown-item">
+                            CSV
+                        </a>
+                        <a href="{% url 'download_results' 'xslx' %}" class="dropdown-item">
+                            Excel
+                        </a>
+                      </div>
+                </div>
                     {% if jobs %}
                         <figure>
                         <figcaption class="figure-caption pt-2">Total: {{ jobs.count }}</figcaption>

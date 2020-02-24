@@ -3,10 +3,10 @@
 {% block content %}
 
     <div class="card">
-        <div class="jumbotron">
+        <div class="jumbotron p-5">
         {% if user.is_authenticated %}
         <h3>Welcome, {{ user.username }}!</h3>
-        <p>You currently have <a href="{% url 'jobs' %}">{{ running_jobs.count }} jobs</a> running.</p>
+        <p>You currently have <a href="{% url 'jobs' %}">{{ running_jobs.count }} jobs</a> running, out of a total of {{ jobs.count }} submitted.</p>
         {% else %}
         <h3>Welcome to RobustQ!</h3>
             <p>RobustQ is a service to quantify cellular robustness. Learn more about it <a href="#" class="link text">here</a>.</p>
@@ -16,14 +16,13 @@
 
             {% if user.is_authenticated %}
                 {% load crispy_forms_tags %}
-                <p class="pl-3">You submitted a total of {{ jobs.count }} jobs.</p>
             <p class="pl-3">Want to queue another job?</p>
             {% include 'includes/new_job_form.html' %}
             {% else %}
 
             <p class="pl-3">How to get started:</p>
                 <ol class="pl-5">
-                    <li><a href="{% url 'register' %}">Create an account</a></li>
+                    <li><a href="{% url 'register' %}">Create an account</a> or <a href="{% url 'login' %}">Sign In</a></li>
                     <li>Submit your job here</li>
                     <li>Wait for the job to finish. This can take up to 48 hours, depending on the model size.</li>
                     <li>Once your job is finished, you will receive a notification.</li>

@@ -74,6 +74,9 @@ urlpatterns = [
     path('jobs/details/<int:pk>', job_views.JobDetailView.as_view(), name='details'),
     path('jobs/delete/<int:pk>', job_views.JobDeleteView.as_view(), name='job-delete'),
     path('jobs/cancel/<int:pk>', job_views.cancel_job, name='cancel'),
+    path('jobs/download_results/<str:type>', job_views.download_results, name='download_results'),
+    path('jobs/download_job/<int:pk>', job_views.download_job, name='download_job'),
+
 ]
 
 if settings.DEBUG:

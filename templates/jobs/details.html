@@ -16,7 +16,9 @@
             </div>
             <div class="card-body">
                 <tr class="py-2 pt-3 container">
-                <a href="{% url 'jobs' %}" class="btn btn-sm btn-outline-info">Overview <i class="fas fa-list"></i></a>
+                    <a href="{% url 'jobs' %}" class="btn btn-sm btn-outline-info">Overview <i class="fas fa-list"></i></a>
+                    <a onClick="window.location.reload();" class="btn btn-sm btn-outline-secondary"><i class="fas fa-redo"></i> </a>
+
                         <br>
                     {% if job %}
                         <br>
@@ -97,6 +99,7 @@
                         {% if not job.is_finished %}
                         <a id="cancel_btn" class="btn btn-sm btn-outline-warning float-right ml-1"><i class="fas fa-window-close"></i> Cancel</a>
                         {% else %}
+                            <a href="{% url 'download_job' job.id %}" class="btn btn-sm btn-outline-secondary">Download logs and files (.zip) <i class="fas fa-download"></i></a>
                         <a href="{% url 'job-delete' job.id %}" class="btn btn-sm btn-outline-danger float-right"><i class="fas fa-trash"></i> Delete </a>
                         {% endif %}
                     {% else %}

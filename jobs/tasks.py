@@ -79,11 +79,12 @@ def cleanup_expired_results():
     """ """
     # objects older than x (default 14) days will be deleted
     expired = timezone.now() - timedelta(days=settings.DAYS_UNTIL_JOB_DELETE)
-    print(f'Deleting expired jobs. All jobs before {expired} will be deleted now.')
-    jobs = Job.objects.filter(start_date__lt=expired, is_finished=True)
+    print(f'Deleting expired jobs. All jobs, that have started before {expired} will be deleted now.')
+    jobs = Job.objects.filter(start_date__lt=expired)
     for job in jobs:
         shutil.rmtree(os.path.dirname(job.sbml_file.path), ignore_errors=True)
     jobs.delete()
+
     # TODO delete taskresults?
 
 
@@ -147,17 +148,15 @@ def send_result_email(self, result, job_id=None, *args, **kwargs):
 
 
 @shared_task(bind=True, name="SBML_processing")
-def sbml_processing(self, job_id=None, *args, **kwargs):
+def sbml_processing(self, job_id=None, make_consistent=False, *args, **kwargs):
     """ """
     import cobra
-    from cobra.flux_analysis.variability import find_blocked_reactions
-    # import cobra.manipulation
 
     logger, fpath, path, fname, model_name, extension = setup_process(self, job_id=job_id, result=None, *args, **kwargs)
 
     #  Set start date to now
     Job.objects.filter(id=job_id).update(start_date=timezone.now())
-
+    logger.info(f'Make model consistent = {make_consistent}')
     logger.info(f'Trying to load SBML model {fname} in directory {path}')
 
     if extension == '.json':
@@ -176,34 +175,49 @@ def sbml_processing(self, job_id=None, *args, **kwargs):
     metabolites = len(m.metabolites)
     genes = len(m.genes)
 
-    # Make model consistent - commented out for testing
-    # fba_orig = m.slim_optimize()
-    # rxns_orig = len(m.reactions)
-    # mets_orig = len(m.metabolites)
-    # tol_orig = m.tolerance
-    #
-    # m.remove_reactions(find_blocked_reactions(m))
-    # # TODO look for possible fix for Pool issue
-    # m, _ = cobra.manipulation.delete.prune_unused_metabolites(m)
-    #
-    # fba_cons = m.slim_optimize()
-    # rxns_cons = len(m.reactions)
-    # mets_cons = len(m.metabolites)
-    #
-    # if abs(fba_orig - fba_cons) > (fba_orig * tol_orig):
-    #     logger.error(f'{fname}: difference in FBA objective is too large')
-    #     raise Exception(f'ERROR: {fname}: difference in FBA objective is too large')
-    #
-    # logger.info(f'{model_name}:\n{rxns_orig} rxns, {mets_orig} mets, obj: {fba_orig} '
-    #             f'--> {rxns_cons} rxns, {mets_cons} mets, obj: {fba_cons}\n')
-
     # Get Biomass reaction
     # bm_rxn = m.objective.expression  # doesnt return pure id
     bm_rxn = list(cobra.util.solver.linear_reaction_coefficients(m))[0].id
     logger.info(f'Biomass reaction was found to be {bm_rxn}')
 
     job = Job.objects.filter(id=job_id)
-    job.update(reactions=reactions, metabolites=metabolites, genes=genes, objective_expression=bm_rxn)
+
+    if make_consistent:
+        # Make model consistent
+        from cobra.flux_analysis.variability import find_blocked_reactions
+        import cobra.manipulation
+        logger.info('Next step: try to make model consistent')
+        fba_orig = m.slim_optimize()
+        rxns_orig = len(m.reactions)
+        mets_orig = len(m.metabolites)
+        tol_orig = m.tolerance
+
+        m.remove_reactions(find_blocked_reactions(m))
+        # TODO look for possible fix for Pool issue
+        m, _ = cobra.manipulation.delete.prune_unused_metabolites(m)
+
+        fba_cons = m.slim_optimize()
+        rxns_cons = len(m.reactions)
+        mets_cons = len(m.metabolites)
+
+        if abs(fba_orig - fba_cons) > (fba_orig * tol_orig):
+            logger.error(f'{fname}: difference in FBA objective is too large')
+            raise Exception(f'ERROR: {fname}: difference in FBA objective is too large')
+
+        logger.info(f'{model_name}:\n{rxns_orig} rxns, {mets_orig} mets, obj: {fba_orig} '
+                    f'--> {rxns_cons} rxns, {mets_cons} mets, obj: {fba_cons}\n')
+        try:
+            bm_orig = bm_rxn
+            if m.objective.expression:
+                bm_rxn = m.objective.expression
+            else:
+                pass
+        except:
+            pass
+
+        job.update(reactions=rxns_cons, metabolites=mets_cons, genes=len(m.genes), objective_expression=bm_rxn)
+    else:
+        job.update(reactions=reactions, metabolites=metabolites, genes=genes, objective_expression=bm_rxn)
 
     # Extract info from model and write to respective files
     try:
@@ -561,11 +575,11 @@ def abort_task(self, *args, **kwargs):
 
 
 @shared_task(bind=True, name="execute_pipeline", base=AbortableTask)
-def execute_pipeline(self, job_id, compression_checked, cardinality, *args, **kwargs):
+def execute_pipeline(self, job_id, compression_checked, cardinality, make_consistent, *args, **kwargs):
     logger, fpath, path, fname, model_name, extension = setup_process(self, job_id=job_id, result=None, *args,
                                                                       **kwargs)
 
-    Job.objects.filter(id=job_id).update(task_id_job=self.request.id)
+    Job.objects.filter(id=job_id).update(task_id_job=self.request.id, model_name=model_name)
     # TODO try out other mechanism for concurrency
     # while cache.get('running_job'):
     #     if cache.get('running_job') == job_id:
@@ -575,7 +589,7 @@ def execute_pipeline(self, job_id, compression_checked, cardinality, *args, **kw
     # cache.set('running_job', job_id, timeout=10000)
     # logger.info(f'Setting cache lock to {job_id}')
 
-    result = chain(sbml_processing.s(job_id=job_id),
+    result = chain(sbml_processing.s(job_id=job_id, make_consistent=make_consistent),
                    compress_network.s(job_id=job_id, do_compress=compression_checked),
                    create_dual_system.s(job_id=job_id, do_compress=compression_checked),
                    defigueiredo.s(job_id=job_id, cardinality=cardinality, do_compress=compression_checked),
@@ -600,14 +614,20 @@ def execute_pipeline(self, job_id, compression_checked, cardinality, *args, **kw
     this_result = AbortableAsyncResult(self.request.id)
     while not result.ready():  # this blocks the worker from starting another task before the previous one has finished
         for parent in parents:
-            if parent.status == 'FAILURE':
+            if parent.status == 'FAILURE' or parent.status == 'REVOKED':
                 try:
                     name = parent._cache['task_name']
-                except:
+                except:  # broad exception clause because could be AttributeError or ValueError or TypeError
                     name = None
                 logger.error(f'Task {parent.id}, {name} failed!')
                 return result.task_id
         if this_result.is_aborted() or this_result.status == 'REVOKED':
+            result.revoke()
+            for parent in parents:
+                if parent.status == 'STARTED':
+                    parent.revoke(terminate=True)
+                if parent.status == 'PENDING':
+                    parent.revoke()
             break
 
         time.sleep(1)

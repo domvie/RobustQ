@@ -45,12 +45,30 @@
                     {% endif %}
                 </fieldset>
                 <div class="form-group">
-{#                    <input type="checkbox" name="compression_checkbox" id="compression_checkbox" checked>#}
+                    <div class="row">
+                        <div class="col-sm-1 text-right pr-1">
                                         {{ job_form.compression }}
-                    <label for="compression">Compress network <small>(improves runtime but may not work with some models)</small>.</label> <br>
-{#                    <input type="number" style="width: 3.5rem;" id="d_value" min="1" max="4" value="2" step="1" list="defaultNumbers" required>#}
-                                        {{ job_form.cardinality }}
-                    <label for="cardinality">Cardinality <small>(for larger models, only =< 3 feasible)</small></label>
+                        </div>
+                        <div class="col-sm-6 text-left pl-1">
+                    <label for="compression">Compress network <small>(improves runtime but may not work with some models)</small>.</label>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-sm-1 text-right pr-1">
+                    {{ job_form.cardinality }}
+                        </div>
+                        <div class="col-sm-6 text-left pl-1">
+                    <label for="cardinality">Cardinality <small>(for larger models, only =< 3 feasible)</small></label><br>
+                        </div>
+                    </div>
+                        <div class="row">
+                            <div class="col-sm-1 text-right pr-1">
+                    {{ job_form.make_consistent }}
+                            </div>
+                            <div class="col-sm-6 text-left pl-1">
+                    <label for="make_consistent">Make model consistent <small>(testing)</small></label>
+                            </div>
+                        </div>
                     <br>
 
                     <datalist id="defaultNumbers">

@@ -33,10 +33,12 @@ def start_job(sender, instance, created, **kwargs):
     id = instance.id
     compression_checked = instance.compression
     cardinality = instance.cardinality
+    make_consistent = instance.make_consistent
 
     execute_pipeline.apply_async(kwargs={'job_id':id,
                                          'compression_checked':compression_checked,
-                                         'cardinality':cardinality},
+                                         'cardinality':cardinality,
+                                         'make_consistent':make_consistent},
                                  queue='jobs')
 
     # TODO ideas: databasetable with queue, queues, improved lock mechanism,
@@ -136,12 +138,20 @@ def task_postrun_handler(sender, task_id, task, retval, state, *args,  **kwargs)
     # getting the same logger created in prerun handler and closilogging.getLoggerng all handles associated with it
     logger = get_task_logger(task_id)
     logger.info("%s ran for %s", task.__name__, str(datetime.timedelta(seconds=cost)))
+
+    SubTask.objects.filter(task_id=task_id).update(duration=str(datetime.timedelta(seconds=cost)))
+
     for handler in logger.handlers:
         handler.flush()
         handler.close()
     logger.handlers = []
     if task.__name__ == 'execute_pipeline':
         cache.delete('running_job')
+        try:
+            job_id = kwargs['kwargs']['job_id']
+            Job.objects.filter(id=job_id).update(is_finished=True)
+        except:
+            pass
 
 
 @task_failure.connect

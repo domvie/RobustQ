@@ -6,7 +6,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from .models import Job, SubTask
 from ipware import get_client_ip
 from django.forms.models import model_to_dict
-from django.http import HttpResponse, HttpResponseForbidden, JsonResponse
+from django.http import HttpResponse, HttpResponseForbidden, JsonResponse, FileResponse
 from django_celery_results.models import TaskResult
 from celery.result import AsyncResult
 from django_tables2.views import SingleTableView
@@ -18,6 +18,9 @@ import signal
 import os
 from django.utils import html
 from django.utils import timezone
+import pandas as pd
+import shutil
+from io import BytesIO as IO
 
 # @login_required
 # def new(request):
@@ -173,7 +176,7 @@ def cancel_job(request, pk):
         result.abort()
         result.revoke(terminate=True)
         job = Job.objects.filter(id=pk)
-        job.update(status="Cancelled")
+        job.update(status="Cancelled", is_finished=True)
         # kill the process with the pid
         pid = cache.get("running_task_pid")
         try:
@@ -202,3 +205,49 @@ def cancel_job(request, pk):
 
     # json = serialize('json', {'job': pk})
     return JsonResponse({'0': 0})
+
+
+@login_required
+def download_results(request, type):
+    """ """
+    jobs = Job.objects.filter(user=request.user, is_finished=True, status='Done')
+    data = jobs.values('model_name', 'result', 'cardinality', 'compression', 'make_consistent', 'reactions',
+                       'metabolites', 'genes', 'objective_expression', 'duration')
+    df = pd.DataFrame.from_records(data)
+
+    if type == 'csv':
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = 'attachment; filename=results.csv'
+
+        df.to_csv(path_or_buf=response, sep=';', float_format='%.2f', index=False, decimal=".")
+    else:
+        xlfile = IO()
+        xlwriter = pd.ExcelWriter(xlfile)
+        df.to_excel(xlwriter)
+        xlwriter.save()
+        xlwriter.close()
+
+        # important step, rewind the buffer or when it is read() you'll get nothing
+        # but an error message when you try to open your zero length file in Excel
+        xlfile.seek(0)
+
+        # set the mime type so that the browser knows what to do with the file
+        response = HttpResponse(xlfile.read(),
+                                content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+        response['Content-Disposition'] = 'attachment; filename=results.xslx'
+
+    return response
+
+
+@login_required
+def download_job(request, pk):
+    """ """
+    job = Job.objects.get(id=pk)
+    if not request.user == job.user:
+        return HttpResponseForbidden
+    filename = f'RobustQ_job_{pk}'
+    zipf = shutil.make_archive(filename, 'zip', os.path.dirname(job.sbml_file.path))
+    zipf_ = open(zipf, 'rb')
+    response = FileResponse(zipf_)
+    os.remove(zipf)
+    return response
