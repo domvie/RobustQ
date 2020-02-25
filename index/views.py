@@ -29,7 +29,7 @@ def home(request):
                 extended.user = request.user
                 extended.file = request.FILES
                 extended.save()
-                return redirect('details', extended.id)
+                return redirect('jobs')
     return render(request, 'index/index.html', context=context)
 
 
