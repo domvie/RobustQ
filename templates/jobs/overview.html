@@ -33,7 +33,12 @@
                       </div>
                 </div>
                         <figure>
-                        <figcaption class="figure-caption pt-2">Total: {{ jobs.count }}</figcaption>
+                        <figcaption class="figure-caption pt-2">
+                            Total: {{ jobs.count }}
+                            {% if jobs_queued %}
+                                - {{ jobs_queued }} in queue.
+                            {% endif %}
+                        </figcaption>
                     {% render_table table %}
                         </figure>
                     {% else %}

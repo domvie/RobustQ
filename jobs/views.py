@@ -23,6 +23,8 @@ from django.utils import timezone
 import pandas as pd
 import shutil
 from io import BytesIO as IO
+import pika
+
 
 # @login_required
 # def new(request):
@@ -81,6 +83,21 @@ class JobOverView(LoginRequiredMixin, SingleTableView, ListView):
         # context['table'] = self.table
         context['running_jobs'] = jobs.filter(is_finished='False')
         context['jobs'] = jobs
+
+        # Get number of queued jobs from RabbitMQ
+        pika_conn_params = pika.ConnectionParameters(
+            host='localhost', port=5672,
+            credentials=pika.credentials.PlainCredentials('guest', 'guest'),
+        )
+        connection = pika.BlockingConnection(pika_conn_params)
+        channel = connection.channel()
+        queue = channel.queue_declare(
+            queue="jobs", durable=True,
+            exclusive=False, auto_delete=False
+        )
+
+        context['jobs_queued'] = queue.method.message_count
+
         return context
 
 
