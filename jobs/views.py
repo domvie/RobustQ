@@ -47,7 +47,7 @@ class NewJobView(LoginRequiredMixin, CreateView, FormMixin):
     success_url = reverse_lazy('jobs')
 
     def get_success_url(self):
-        return reverse('jobs')
+        return '/jobs/'
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
