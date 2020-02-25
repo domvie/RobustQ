@@ -23,43 +23,7 @@ from django.contrib.auth.models import User
 from django.conf import settings
 from django.conf.urls.static import static
 from django.conf.urls import url
-from rest_framework import routers, serializers, viewsets
 
-
-# Serializers define the API representation.
-class JobSerializer(serializers.HyperlinkedModelSerializer):
-    # url = serializers.HyperlinkedIdentityField(view_name="jobs:details")
-
-    class Meta:
-        model = Job
-        fields = '__all__'  # ['url', 'username', 'email', 'is_staff']
-
-
-class UserSerializer(serializers.HyperlinkedModelSerializer):
-
-    class Meta:
-        model = User
-        fields = ['url', 'username', 'email', 'is_staff']
-
-
-class UserViewSet(viewsets.ModelViewSet):
-    """
-    API endpoint that allows users to be viewed or edited.
-    """
-    queryset = User.objects.all()
-    serializer_class = UserSerializer
-
-
-# ViewSets define the view behavior.
-class JobViewSet(viewsets.ModelViewSet):
-    user = UserSerializer()
-    queryset = Job.objects.all()
-    serializer_class = JobSerializer
-
-# Routers provide an easy way of automatically determining the URL conf.
-router = routers.DefaultRouter()
-router.register(r'jobs', JobViewSet)
-router.register(r'users', UserViewSet)
 
 urlpatterns = [
     path('admin/', admin.site.urls),

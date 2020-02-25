@@ -1,8 +1,10 @@
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, reverse
+from django.urls import reverse_lazy
 from django.contrib.auth.decorators import login_required
 from .forms import JobSubmissionForm, JobTable
 from django.views.generic import CreateView, DetailView, ListView, DeleteView
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
+from django.views.generic.edit import FormMixin
 from .models import Job, SubTask
 from ipware import get_client_ip
 from django.forms.models import model_to_dict
@@ -37,11 +39,15 @@ from io import BytesIO as IO
 #     return render(request, 'jobs/new.html', context={'job_form': job_form})
 
 
-class NewJobView(LoginRequiredMixin, CreateView):
+class NewJobView(LoginRequiredMixin, CreateView, FormMixin):
     model = Job
     template_name = 'jobs/new.html'
     form_class = JobSubmissionForm
     context_object_name = 'job_form'
+    success_url = reverse_lazy('jobs')
+
+    def get_success_url(self):
+        return reverse('jobs')
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
