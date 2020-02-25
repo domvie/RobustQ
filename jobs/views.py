@@ -23,7 +23,7 @@ from django.utils import timezone
 import pandas as pd
 import shutil
 from io import BytesIO as IO
-import pika
+from RobustQ.celery import app
 
 
 # @login_required
@@ -84,19 +84,11 @@ class JobOverView(LoginRequiredMixin, SingleTableView, ListView):
         context['running_jobs'] = jobs.filter(is_finished='False')
         context['jobs'] = jobs
 
-        # Get number of queued jobs from RabbitMQ
-        pika_conn_params = pika.ConnectionParameters(
-            host='localhost', port=5672,
-            credentials=pika.credentials.PlainCredentials('guest', 'guest'),
-        )
-        connection = pika.BlockingConnection(pika_conn_params)
-        channel = connection.channel()
-        queue = channel.queue_declare(
-            queue="jobs", durable=True,
-            exclusive=False, auto_delete=False
-        )
+        # Get number of queued jobs
 
-        context['jobs_queued'] = queue.method.message_count
+        with app.connection_or_acquire() as conn:
+            context['jobs_queued'] = conn.default_channel.queue_declare(
+                queue='jobs', passive=True).message_count
 
         return context
 
