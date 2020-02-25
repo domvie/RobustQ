@@ -54,6 +54,15 @@
                         </div>
                     </div>
                     <div class="row">
+                            <div class="col-sm-1 text-right pr-1">
+                    {{ job_form.make_consistent }}
+                            </div>
+                            <div class="col-sm-6 text-left pl-1">
+                    <label for="make_consistent">Make model consistent <small>(testing)</small></label>
+                            </div>
+                    </div>
+
+                    <div class="row">
                         <div class="col-sm-1 text-right pr-1">
                     {{ job_form.cardinality }}
                         </div>
@@ -61,16 +70,8 @@
                     <label for="cardinality">Cardinality <small>(for larger models, only =< 3 feasible)</small></label><br>
                         </div>
                     </div>
-                        <div class="row">
-                            <div class="col-sm-1 text-right pr-1">
-                    {{ job_form.make_consistent }}
-                            </div>
-                            <div class="col-sm-6 text-left pl-1">
-                    <label for="make_consistent">Make model consistent <small>(testing)</small></label>
-                            </div>
-                        </div>
-                    <br>
 
+                    <br>
                     <datalist id="defaultNumbers">
                       <option value="2">
                       <option value="1">

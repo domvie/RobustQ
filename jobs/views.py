@@ -245,7 +245,7 @@ def download_job(request, pk):
     job = Job.objects.get(id=pk)
     if not request.user == job.user:
         return HttpResponseForbidden
-    filename = f'RobustQ_job_{pk}'
+    filename = f'RobustQ_{pk}_{job.model_name}'
     zipf = shutil.make_archive(filename, 'zip', os.path.dirname(job.sbml_file.path))
     zipf_ = open(zipf, 'rb')
     response = FileResponse(zipf_)

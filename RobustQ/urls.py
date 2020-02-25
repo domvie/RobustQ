@@ -49,6 +49,7 @@ class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
     serializer_class = UserSerializer
 
+
 # ViewSets define the view behavior.
 class JobViewSet(viewsets.ModelViewSet):
     user = UserSerializer()
@@ -60,8 +61,6 @@ router = routers.DefaultRouter()
 router.register(r'jobs', JobViewSet)
 router.register(r'users', UserViewSet)
 
-
-
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', include('index.urls')),
@@ -69,7 +68,6 @@ urlpatterns = [
     path('login/', auth_views.LoginView.as_view(template_name='users/login.html'), name='login'),
     path('logout/', auth_views.LogoutView.as_view(template_name='users/logout.html'), name='logout'),
     path('jobs/', job_views.JobOverView.as_view(), name='jobs'),
-    path('profile/', user_views.profile, name='profile'),
     path('jobs/new/', job_views.NewJobView.as_view(), name='new'),
     path('jobs/details/<int:pk>', job_views.JobDetailView.as_view(), name='details'),
     path('jobs/delete/<int:pk>', job_views.JobDeleteView.as_view(), name='job-delete'),

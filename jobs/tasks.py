@@ -272,7 +272,7 @@ def compress_network(self, result, job_id, *args, **kwargs):
                                          '-m', f'{model_name}.mfile',
                                          '-r', f'{model_name}.rfile',
                                          '-v', f'{model_name}.rvfile',
-                                         # '-n', f'{model_name}.nfile',
+                                         '-n', f'{model_name}.nfile',
                                          '-i', f'{model_name}.nfile',
                                          '-p', 'chg_proto.txt',
                                          '-o', '_comp',
@@ -451,18 +451,23 @@ def mcs_to_binary(self, result, job_id, *args, **kwargs):
         with open(os.path.join(path, rxns_fname), 'r') as f:
             rxns = f.read().strip().split()
             rxns = [r.replace('"', '') for r in rxns]
-        f.close()
 
         with open(os.path.join(path, mcs_fname), 'r') as mcsfile, \
                 open(os.path.join(path, output_file), 'w') as outfile:
-            for line in mcsfile:
+            mcs_list = mcsfile.readlines()
+            mcs_set = set(mcs_list)
+            for line in mcs_set:  # TODO "FIX" - removes duplicate MCS from binary MCS file
                 arr = ['0'] * len(rxns)
                 sep = ' ' if ' ' in line else ','
                 mcs = line.strip().split(sep)
                 for rxn in mcs:
                     arr[rxns.index(rxn)] = '1'
                 outfile.write(''.join(arr) + '\n')
-        outfile.close()
+
+        if len(mcs_list) > len(mcs_set):
+            logger.warning(f'Duplicate MCS entries were found in {mcs_fname} (total {len(mcs_list)} vs {len(mcs_set)} unique).'
+                           f' Duplicate entries were removed for PoF calculation and written to {output_file}')
+
         logger.info(f'Successfully read {mcs_fname} and {rxns_fname} and wrote output to {output_file}')
 
     except Exception as e:
