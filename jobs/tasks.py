@@ -206,14 +206,6 @@ def sbml_processing(self, job_id=None, make_consistent=False, *args, **kwargs):
 
         logger.info(f'{model_name}:\n{rxns_orig} rxns, {mets_orig} mets, obj: {fba_orig} '
                     f'--> {rxns_cons} rxns, {mets_cons} mets, obj: {fba_cons}\n')
-        try:
-            bm_orig = bm_rxn
-            if m.objective.expression:
-                bm_rxn = m.objective.expression
-            else:
-                pass
-        except:
-            pass
 
         job.update(reactions=rxns_cons, metabolites=mets_cons, genes=len(m.genes), objective_expression=bm_rxn)
     else:
