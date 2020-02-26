@@ -293,6 +293,10 @@ def compress_network(self, result, job_id, *args, **kwargs):
 
         with compress_process.stdout:
             log_subprocess_output(compress_process.stdout, logger=logger)
+            if self.is_aborted():
+                # respect aborted state, and terminate gracefully.
+                logger.warning('Task aborted')
+                compress_process.kill()
 
         compress_process.wait()
 
@@ -355,6 +359,7 @@ def create_dual_system(self, result, job_id, *args, **kwargs):
         logger.info(f'Starting {self.request.task} with the following arguments: {" ".join(cmd_args)}')
 
         create_dual_system_process = subprocess.Popen(cmd_args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        cache.set("running_task_pid", create_dual_system_process.pid)
 
         with create_dual_system_process.stdout:
             log_subprocess_output(create_dual_system_process.stdout, logger=logger)
@@ -411,6 +416,7 @@ def defigueiredo(self, result, job_id, cardinality, *args, **kwargs):
         logger.info(f'Starting {self.request.task} with the following arguments: {" ".join(cmd_args)}')
 
         defigueiredo_process = subprocess.Popen(cmd_args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        cache.set("running_task_pid", defigueiredo_process.pid)
 
         with defigueiredo_process.stdout:
             log_subprocess_output(defigueiredo_process.stdout, logger=logger)
@@ -573,18 +579,15 @@ def abort_task(self, *args, **kwargs):
 
 @shared_task(bind=True, name="execute_pipeline", base=AbortableTask)
 def execute_pipeline(self, job_id, compression_checked, cardinality, make_consistent, *args, **kwargs):
+    this_result = AbortableAsyncResult(self.request.id)
+    if this_result.is_aborted() or this_result.status == 'REVOKED':
+        return 'REVOKED'
+
+    cache.set('running_job', job_id, timeout=10000)
     logger, fpath, path, fname, model_name, extension = setup_process(self, job_id=job_id, result=None, *args,
                                                                       **kwargs)
 
     Job.objects.filter(id=job_id).update(task_id_job=self.request.id, model_name=model_name)
-    # TODO try out other mechanism for concurrency
-    # while cache.get('running_job'):
-    #     if cache.get('running_job') == job_id:
-    #         break
-    #     time.sleep(5)  #  check every 5 secs if other jobs are finished
-
-    # cache.set('running_job', job_id, timeout=10000)
-    # logger.info(f'Setting cache lock to {job_id}')
 
     result = chain(sbml_processing.s(job_id=job_id, make_consistent=make_consistent),
                    compress_network.s(job_id=job_id, do_compress=compression_checked),
@@ -608,7 +611,6 @@ def execute_pipeline(self, job_id, compression_checked, cardinality, make_consis
         copy = copy.parent
     logger.info(parents)
 
-    this_result = AbortableAsyncResult(self.request.id)
     while not result.ready():  # this blocks the worker from starting another task before the previous one has finished
         for parent in parents:
             if parent.status == 'FAILURE' or parent.status == 'REVOKED':
@@ -616,9 +618,12 @@ def execute_pipeline(self, job_id, compression_checked, cardinality, make_consis
                     name = parent._cache['task_name']
                 except:  # broad exception clause because could be AttributeError or ValueError or TypeError
                     name = None
-                logger.error(f'Task {parent.id}, {name} failed!')
+                logger.error(f'Task {parent.id}, {name} ended with status {parent.status}!')
                 return result.task_id
         if this_result.is_aborted() or this_result.status == 'REVOKED':
+            # if this (execute_pipeline) task has been revoked (by clicking 'cancel'), revoke all tasks in the chain
+            # as well to stop them from being executed
+            print(f'Task {self.request.id} was flagged as revoked or got aborted, status {this_result.status}')
             result.revoke()
             for parent in parents:
                 if parent.status == 'STARTED':

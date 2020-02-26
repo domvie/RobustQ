@@ -4,7 +4,7 @@ from django.utils import timezone
 from jobs.models import Job, SubTask
 from .tasks import execute_pipeline
 from django_celery_results.models import TaskResult
-from celery.signals import task_postrun, after_task_publish, task_prerun, task_failure, celeryd_init
+from celery.signals import task_postrun, after_task_publish, task_prerun, task_failure, celeryd_init, task_revoked
 from celery import chain
 from celery.result import AsyncResult
 import os
@@ -65,14 +65,16 @@ def task_prerun_handler(sender=None, task_id=None, task=None, *args, **kwargs):
         return
 
     timer[task_id] = time()
+
     job_id = kwargs['kwargs']['job_id']
+
+    cache.set("current_task", task_id, timeout=None)
+    cache.set('current_job', job_id, timeout=None)
+
     job_qs = Job.objects.filter(id=job_id)
     job = job_qs.get()
     if job.status is not "Done":
         job_qs.update(status="Started")
-
-    cache.set("current_task", task_id, timeout=None) # TODO - doesnt always target correct task
-    cache.set('current_job', job_id, timeout=None)
 
     fpath = job.sbml_file.path
     path = os.path.dirname(fpath)
@@ -82,7 +84,6 @@ def task_prerun_handler(sender=None, task_id=None, task=None, *args, **kwargs):
         os.mkdir(path_logs)
     if not os.path.exists(public_logs):
         os.mkdir(public_logs)
-
 
     # Set up logging for each task individually
     logger = get_task_logger(task_id) #logging.getLogger(task_id)
@@ -167,3 +168,28 @@ def task_failure_handler(sender=None, task_id=None, exception=None, *args, **kwa
 @celeryd_init.connect
 def worker_init(sender, instance, conf, options, **kwargs):
     cache.delete('running_job')
+
+
+@task_revoked.connect(sender="execute_pipeline")
+def task_revoked_handler(request, terminated, signum, expired, *args, **kwargs):
+    job_id = kwargs['job_id']
+    job = Job.objects.filter(id=job_id)
+    job.update(status="Cancelled", is_finished=True)
+    logger = get_task_logger(request.id)
+    logger.warning(f'Task {request.task} for job {job_id} has been flagged as revoked, with terminate={terminated}, '
+                   f'signal {signum}, expired: {expired}')
+
+
+@after_task_publish.connect(sender="execute_pipeline")
+def task_sent_handler(sender=None, headers=None, body=None, **kwargs):
+    # information about task are located in headers for task messages
+    # using the task protocol version 2.
+    info = headers if 'task' in headers else body
+
+    try:
+        job_id=body[1]['job_id']
+        job = Job.objects.filter(id=job_id)
+        job.update(task_id_job=info['id'])
+
+    except Exception as e:
+        print(repr(e))

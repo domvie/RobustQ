@@ -85,10 +85,17 @@ class JobOverView(LoginRequiredMixin, SingleTableView, ListView):
         context['jobs'] = jobs
 
         # Get number of queued jobs
-
+        # first, get the number in the message broker queue
         with app.connection_or_acquire() as conn:
             context['jobs_queued'] = conn.default_channel.queue_declare(
                 queue='jobs', passive=True).message_count
+        # then get the tasks that have been sent to the worker but have not been executed yet
+        reserved_tasks = app.control.inspect().reserved()
+        nr_jobs_sent_to_worker = len(list(reserved_tasks.values())[0])
+        if context['jobs_queued']:
+            context['jobs_queued'] += nr_jobs_sent_to_worker
+        elif nr_jobs_sent_to_worker != 0:
+            context['jobs_queued'] = nr_jobs_sent_to_worker
 
         return context
 
@@ -185,24 +192,35 @@ def cancel_job(request, pk):
         return redirect('index-home')
 
     try:
-        current_task = cache.get("current_task")
-        result = AbortableAsyncResult(current_task)
+        task_id_job = job.task_id_job
+        result = AbortableAsyncResult(task_id_job)
         # terminate the running and all subsequent tasks
+        # calling abort() and/or revoke() on this result will result in a cascade of revokes of uncompleted tasks
+        # as in the execute_pipeline() task all chain tasks get called .revoke() on them
+        print(f'REVOKING JOB {task_id_job}')
         result.abort()
         result.revoke(terminate=True)
-        job = Job.objects.filter(id=pk)
-        job.update(status="Cancelled", is_finished=True)
-        # kill the process with the pid
-        pid = cache.get("running_task_pid")
-        try:
-            os.kill(pid, 0) # check if it is still running
-        except OSError:
-            pass
-        else:
+        if job.status != 'Cancelled':  # should be set to cancelled in task_revoked_handler (signals)
+            job = Job.objects.filter(id=pk)
+            job.update(status="Cancelled", is_finished=True)
+
+        # Get the currently running task/job set by the task_prerun_handler (signals.py)
+        current_task = cache.get('current_task')
+        current_job = cache.get('current_job')  # more reliable than 'running_job'
+        # as running_job is only set by exec_pipline task
+
+        if current_job == pk:  # make sure we dont kill the running task from the wrong view
+            # kill the process with the pid - this is only applicable for subprocesses spawned by the worker with Popen
+            pid = cache.get("running_task_pid")
             try:
-                os.kill(pid, signal.SIGKILL) # if it is running, kill it
-            except ProcessLookupError:
+                os.kill(pid, 0) # check if it is still running - fails pretty much for all non-subprocess tasks
+            except OSError:
                 pass
+            else:
+                try:
+                    os.kill(pid, signal.SIGKILL)  # if it is running, kill it
+                except ProcessLookupError:
+                    pass
 
     except KeyError:
         return JsonResponse({'not found': True})
