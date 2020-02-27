@@ -380,7 +380,7 @@ def create_dual_system(self, result, job_id, *args, **kwargs):
 @shared_task(bind=True, name="defigueiredo", base=AbortableTask)
 @revoke_chain_authority
 def defigueiredo(self, result, job_id, cardinality, *args, **kwargs):
-    """ """
+    """"""
 
     logger, fpath, path, fname, model_name, extension = setup_process(self, job_id=job_id, result=result, *args,
                                                                       **kwargs)

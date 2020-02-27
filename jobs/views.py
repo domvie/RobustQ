@@ -84,18 +84,23 @@ class JobOverView(LoginRequiredMixin, SingleTableView, ListView):
         context['running_jobs'] = jobs.filter(is_finished='False')
         context['jobs'] = jobs
 
-        # Get number of queued jobs
-        # first, get the number in the message broker queue
-        with app.connection_or_acquire() as conn:
-            context['jobs_queued'] = conn.default_channel.queue_declare(
-                queue='jobs', passive=True).message_count
-        # then get the tasks that have been sent to the worker but have not been executed yet
-        reserved_tasks = app.control.inspect().reserved()
-        nr_jobs_sent_to_worker = len(list(reserved_tasks.values())[0])
-        if context['jobs_queued']:
-            context['jobs_queued'] += nr_jobs_sent_to_worker
-        elif nr_jobs_sent_to_worker != 0:
-            context['jobs_queued'] = nr_jobs_sent_to_worker
+        # # Get number of queued jobs # TODO this is currently slow and not worth it
+        # # first, get the number in the message broker queue
+        # try:
+        #     with app.connection_or_acquire() as conn:
+        #         context['jobs_queued'] = conn.default_channel.queue_declare(
+        #             queue='jobs', passive=True).message_count
+        # except:
+        #     context['jobs_queued'] = 0
+        # try: # then get the tasks that have been sent to the worker but have not been executed yet
+        #     reserved_tasks = app.control.inspect().reserved()
+        #     nr_jobs_sent_to_worker = len(list(reserved_tasks.values())[0])
+        # except AttributeError:  # when value is None (celery not running e.g.)
+        #     nr_jobs_sent_to_worker = 0
+        # if context['jobs_queued']:
+        #     context['jobs_queued'] += nr_jobs_sent_to_worker
+        # elif nr_jobs_sent_to_worker != 0:
+        #     context['jobs_queued'] = nr_jobs_sent_to_worker
 
         return context
 
@@ -212,15 +217,16 @@ def cancel_job(request, pk):
         if current_job == pk:  # make sure we dont kill the running task from the wrong view
             # kill the process with the pid - this is only applicable for subprocesses spawned by the worker with Popen
             pid = cache.get("running_task_pid")
-            try:
-                os.kill(pid, 0) # check if it is still running - fails pretty much for all non-subprocess tasks
-            except OSError:
-                pass
-            else:
+            if pid is not None:
                 try:
-                    os.kill(pid, signal.SIGKILL)  # if it is running, kill it
-                except ProcessLookupError:
+                    os.kill(pid, 0) # check if it is still running - fails pretty much for all non-subprocess tasks
+                except OSError:
                     pass
+                else:
+                    try:
+                        os.kill(pid, signal.SIGKILL)  # if it is running, kill it
+                    except ProcessLookupError:
+                        pass
 
     except KeyError:
         return JsonResponse({'not found': True})
