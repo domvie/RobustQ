@@ -119,6 +119,12 @@ class JobDetailView(LoginRequiredMixin, UserPassesTestMixin, DetailView):
         job_dict = model_to_dict(job)
         job_dict['user'] = self.request.user
         job_dict.pop('ip')
+        to_pop = []
+        for k, v in job_dict.items():
+            if v is None:
+                to_pop.append(k)
+        for k in to_pop:
+            job_dict.pop(k)
         context['job'] = job_dict
         subtasks = job.subtask_set.all()
         fpath = os.path.dirname(os.path.relpath(job.sbml_file.path))
