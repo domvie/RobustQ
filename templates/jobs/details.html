@@ -6,107 +6,154 @@
 {% load static %}
 {% load crispy_forms_tags %}
 {% block content %}
-    <script>
-        var job_id = {{ job.id }};
-    </script>
-    <div class="content-section">
-        <div class="card border">
-            <div class="card-header bg-light">
-                <h3>Job #{{ job.id }} - Details</h3>
-            </div>
-            <div class="card-body">
-                <tr class="py-2 pt-3 container">
-                    <a href="{% url 'jobs' %}" class="btn btn-sm btn-outline-info">Overview <i class="fas fa-list"></i></a>
-                    <a onClick="window.location.reload();" class="btn btn-sm btn-outline-secondary"><i class="fas fa-redo"></i> </a>
+    <main role="main" class="container py-5">
+        <script>
+            var job_id = {{ job.id }};
+        </script>
+        <div class="content-section">
+            <div class="card border">
+                <div class="card-header bg-light">
+                    <h3>Job #{{ job.id }} - Details</h3>
+                </div>
+                <div class="card-body">
+                    <tr class="py-2 pt-3 container">
+                        <a href="{% url 'jobs' %}" class="btn btn-sm btn-outline-info">Overview <i
+                                class="fas fa-list"></i></a>
+                        <a onClick="window.location.reload();" class="btn btn-sm btn-outline-secondary"><i
+                                class="fas fa-redo"></i> </a>
 
                         <br>
-                    {% if job %}
-                        <br>
+                        {% if job %}
+                            <br>
 
-                        <table class="table table-sm table-condensed table-striped table-hover">
-                        {% for key, value in job.items %}
-                            <tr class="row">
-{#                                <div class="d-sm-inline-flex flex-sm-row align-item-sm-center">#}
-                                <td class="table-info col-sm-3"><b>{{ key|upper }}</b></td>
-                                <td class="table-light col-sm-9">{{ value }} </td>
-{#                                </div>#}
-                            </tr>
-                        {% endfor %}
-                        </table>
+                            <table class="table table-sm table-condensed table-striped table-hover">
+                                {% for key, value in job.items %}
+                                    <tr class="row">
+                                        {#                                <div class="d-sm-inline-flex flex-sm-row align-item-sm-center">#}
+                                        <td class="table-info col-sm-3"><b>{{ key|upper }}</b></td>
+                                        <td class="table-light col-sm-9">{{ value }} </td>
+                                        {#                                </div>#}
+                                    </tr>
+                                {% endfor %}
+                            </table>
 
-                        {% if tasks %}
-                            <p class="h4">Task details</p>
-                            <small>Subtask {{ forloop.counter }}</small>
+                            {% if tasks %}
+                                <p class="h4">Task details</p>
+                                <small>Subtask {{ forloop.counter }}</small>
 
-                            {% for task in tasks %}
-                        <table class="table table-sm table-condensed table-striped table-hover">
-                                    {% for key, value in task.items %}
-                                        {% if value is not None %}
-                                            {% if key == 'task_result' %}
+                                {% for task in tasks %}
+                                    <table class="table table-sm table-condensed table-striped table-hover">
+                                        {% for key, value in task.items %}
+                                            {% if value is not None %}
+                                                {% if key == 'task_result' %}
 
-                                                {% for k, v in value.items %}
+                                                    {% for k, v in value.items %}
+                                                        <tr class="row">
+                                                            <td class="table-info col-sm-3">{{ k|upper }}</td>
+                                                            <td class="table-light col-sm-9">{{ v|safe }}</td>
+                                                        </tr>
+                                                    {% endfor %}
+
+                                                {% else %}
+
                                                     <tr class="row">
-                                                <td class="table-info col-sm-3">{{ k|upper }}</td>
-                                                <td class="table-light col-sm-9">{{ v|safe }}</td>
+
+                                                        <td class="table-info col-sm-3">{{ key|upper }}</td>
+
+                                                        {% if key == 'logfile' %}
+                                                            <td class="table-light col-sm-9">
+                                                                <a class="btn btn-sm btn-outline-secondary"
+                                                                   data-toggle="collapse"
+                                                                   href="#log_{{ task.name }}" role="button"
+                                                                   aria-expanded="false"
+                                                                   aria-controls="log_{{ task.name }}">Logdata</a>
+                                                                <a href="{{ task.logfile.path }}"
+                                                                   class="btn btn-sm btn-outline-secondary">Download</a>
+                                                                <div class="collapse p-2" id="log_{{ task.name }}">
+
+                                                                    <div class="card card-body" style="height: 30rem">
+                                                                        <div class="container overflow-auto"
+                                                                             style="height: 30rem">
+                                                                            <code style="color: black;">
+                                                                                {% for line in task.logfile.logdata %}
+                                                                                    <br>
+                                                                                    {{ line }}
+                                                                                {% endfor %}
+                                                                            </code>
+                                                                        </div>
+                                                                    </div>
+
+                                                                </div>
+                                                            </td>
+
+                                                        {% else %}
+                                                            <td class="table-light col-sm-9">{{ value|safe }}</td>
+                                                        {% endif %}
+
                                                     </tr>
-                                                {% endfor %}
 
-                                            {% else %}
-
-                                            <tr class="row">
-
-                                            <td class="table-info col-sm-3">{{ key|upper }}</td>
-
-                                               {% if key == 'logfile' %}
-                                                   <td class="table-light col-sm-9">
-                                                       <a class="btn btn-sm btn-outline-secondary" data-toggle="collapse"
-                                                          href="#log_{{ task.name }}" role="button" aria-expanded="false"
-                                                          aria-controls="log_{{ task.name }}">Logdata</a>
-                                                        <a href="{{ task.logfile.path }}" class="btn btn-sm btn-outline-secondary">Download</a>
-                                                   <div class="collapse p-2" id="log_{{ task.name }}">
-
-                                                      <div class="card card-body" style="height: 30rem">
-                                                          <div class="container overflow-auto" style="height: 30rem">
-                                                            <code style="color: black;">
-                                                          {% for line in task.logfile.logdata %}
-                                                              <br>
-                                                                {{ line }}
-                                                          {% endfor %}
-                                                            </code>
-                                                          </div>
-                                                      </div>
-
-                                                    </div>
-                                                   </td>
-
-                                               {% else %}
-                                                    <td class="table-light col-sm-9">{{ value|safe }}</td>
-                                               {% endif %}
-
-                                            </tr>
-
+                                                {% endif %}
                                             {% endif %}
-                                        {% endif %}
-                                    {% endfor %}
-                                                            </table>
-
-                            {% endfor %}
+                                        {% endfor %}
+                                    </table>
+                                {% endfor %}
+                            {% if rt %}
+                                <table id="table"
+                                       data-toggle="table"
+                                        data-ajax="ajaxHandler"
+                                data-url="{% url 'result_table' job.id %}">
+                                  <thead>
+                                    <tr>
+                                      <th data-field="Unnamed">ID</th>
+                                      <th data-field="d">Item Name</th>
+                                      <th data-field="weight">Item Price</th>
+                                      <th data-field="F(D)">Item Price</th>
+                                      <th data-field="weighted F(d)">Item Price</th>
+                                      <th data-field="acc. weighted F(d)">Item Price</th>
+                                      <th data-field="lethal CS">Item Price</th>
+                                      <th data-field="possible CS">Item Price</th>
+                                    </tr>
+                                    </thead>
+                                </table>
+                                <script>
+                                    var restable = $('#result_table')
+                                    var url = "{% url 'result_table' job.id %}"
+                                    {#var data = [{{ rt|safe }}]#}
+                                    $(function() {
+                                        restable.bootstrapTable({url: url})
+                                     })
+                                    var data;
+                                    ajaxHandler = () => {
+                                    $.get(url)
+                                        .then((response) => {data = JSON.stringify(response); console.log(data);})
+                                        .then((stuff) => console.log(stuff))
+                                    }
+                                </script>
                             {% endif %}
-                    <a href="{% url 'jobs' %}" class="btn btn-sm btn-outline-secondary"><i class="fas fa-arrow-alt-circle-left"></i> Back</a>
-                    <a href="{% url 'new' %}" class="btn btn-sm btn-outline-secondary"><i class="fas fa-plus-circle"></i> Submit New Job</a>
-                    <a onClick="window.location.reload();" class="btn btn-sm btn-outline-secondary"><i class="fas fa-redo"></i> </a>
+                            {% endif %}
+                            <a href="{% url 'jobs' %}" class="btn btn-sm btn-outline-secondary"><i
+                                    class="fas fa-arrow-alt-circle-left"></i> Back</a>
+                            <a href="{% url 'new' %}" class="btn btn-sm btn-outline-secondary"><i
+                                    class="fas fa-plus-circle"></i> Submit New Job</a>
+                            <a onClick="window.location.reload();" class="btn btn-sm btn-outline-secondary"><i
+                                    class="fas fa-redo"></i> </a>
 
-                        {% if not job.is_finished %}
-                        <a id="cancel_btn" class="btn btn-sm btn-outline-warning float-right ml-1"><i class="fas fa-window-close"></i> Cancel</a>
+                            {% if not job.is_finished %}
+                                <a id="cancel_btn" class="btn btn-sm btn-outline-warning float-right ml-1"><i
+                                        class="fas fa-window-close"></i> Cancel</a>
+                            {% else %}
+                                <a href="{% url 'download_job' job.id %}" class="btn btn-sm btn-outline-secondary">Download
+                                    logs and files (.zip) <i class="fas fa-download"></i></a>
+                                <a href="{% url 'job-delete' job.id %}"
+                                   class="btn btn-sm btn-outline-danger float-right"><i class="fas fa-trash"></i> Delete
+                                </a>
+                            {% endif %}
                         {% else %}
-                            <a href="{% url 'download_job' job.id %}" class="btn btn-sm btn-outline-secondary">Download logs and files (.zip) <i class="fas fa-download"></i></a>
-                        <a href="{% url 'job-delete' job.id %}" class="btn btn-sm btn-outline-danger float-right"><i class="fas fa-trash"></i> Delete </a>
+                            <p>Could not find specified job!</p>
                         {% endif %}
-                    {% else %}
-                    <p>Could not find specified job!</p>
-                    {% endif %}
                 </div>
             </div>
         </div>
-    </div>
+        </div>
+    </main>
 {% endblock content %}

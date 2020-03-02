@@ -13,7 +13,7 @@ class JobSubmissionForm(forms.ModelForm):
     #                                                                 message='Wrong file type!'), sbml_validator])
     class Meta:
         model = Job
-        fields = ['sbml_file', 'compression', 'cardinality', 'make_consistent']
+        fields = ['sbml_file', 'compression', 'cardinality_defigueiredo', 'cardinality_pof', 'make_consistent']
 
     def __init__(self, *args, **kwargs):
         super(JobSubmissionForm, self).__init__(*args, **kwargs)
@@ -21,11 +21,16 @@ class JobSubmissionForm(forms.ModelForm):
                                                       'aria-describedby': 'id_sbml_file_Addon01',
                                                       'data-toggle': 'popover',
                                                       'data-content': ''})
-        self.fields['cardinality'].widget.attrs.update({'style': 'width: 3.5rem;',
+        self.fields['cardinality_defigueiredo'].widget.attrs.update({'style': 'width: 3.5rem;',
                                                         'min': '1',
                                                         'max': '5',
                                                         'value': '2',
                                                         'step': '1'})
+        self.fields['cardinality_pof'].widget.attrs.update({'style': 'width: 3.5rem;',
+                                                                'min': '1',
+                                                                'max': '20',
+                                                                'value': '10',
+                                                                'step': '1'})
 
 
 class JobTable(tables.Table):
@@ -79,15 +84,23 @@ class JobTable(tables.Table):
 
     id = tables.LinkColumn('details', args=[tables.utils.A('pk')], text=lambda record: record.pk)
     details = tables.TemplateColumn(template_name="jobs/tables/details.html", extra_context={'label': 'Details'},
-                                    verbose_name='')
+                                    verbose_name='', orderable=False, attrs={"td": {"class": "d-flex justify-content-center"}})
 
     class Meta:
         model = Job
-        fields = ['id', 'status', 'sbml_file', 'start_date', 'compression', 'cardinality',
-                  'make_consistent', 'result', 'duration', 'details']
+        fields = ['id', 'status', 'sbml_file', 'start_date', 'compression', 'cardinality_defigueiredo',
+                  'cardinality_pof', 'make_consistent', 'result', 'duration', 'details']
 
         attrs = {
-            'class': 'table table-sm table-striped table-hover',
+            'class': 'table table-sm table-striped table-hover table-sortable',
+            'data-toggle': 'table',
+            "th": {
+                "_ordering": {
+                    "orderable": "sortable",  # Instead of `orderable`
+                    # "ascending": "ascend",  # Instead of `asc`
+                    # "descending": "descend"  # Instead of `desc`
+                }
+            }
         }
         order_by = "-id"
         # row_attrs = {

@@ -1,7 +1,7 @@
 {% extends 'includes/layout.html' %}
 
 {% block content %}
-
+    <main role="main" class="container py-5">
     <div class="card">
         <div class="jumbotron p-5">
         {% if user.is_authenticated %}
@@ -31,5 +31,5 @@
 
         </div>
     </div>
-
+    </main>
 {% endblock content %}

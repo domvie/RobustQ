@@ -32,12 +32,14 @@ def start_job(sender, instance, created, **kwargs):
 
     id = instance.id
     compression_checked = instance.compression
-    cardinality = instance.cardinality
+    cardinality_defi = instance.cardinality_defigueiredo
+    cardinality_pof = instance.cardinality_pof
     make_consistent = instance.make_consistent
 
     execute_pipeline.apply_async(kwargs={'job_id':id,
                                          'compression_checked':compression_checked,
-                                         'cardinality':cardinality,
+                                         'cardinality_defi':cardinality_defi,
+                                         'cardinality_pof':cardinality_pof,
                                          'make_consistent':make_consistent},
                                  queue='jobs')
 

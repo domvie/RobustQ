@@ -120,14 +120,19 @@ class JobDetailView(LoginRequiredMixin, UserPassesTestMixin, DetailView):
         job_dict['user'] = self.request.user
         job_dict.pop('ip')
         to_pop = []
+        rt = job.result_table
+        if rt:
+            context['rt'] = pd.read_csv(rt).to_json()
+
         for k, v in job_dict.items():
             if v is None:
                 to_pop.append(k)
         for k in to_pop:
             job_dict.pop(k)
+
         context['job'] = job_dict
+
         subtasks = job.subtask_set.all()
-        fpath = os.path.dirname(os.path.relpath(job.sbml_file.path))
         if subtasks:
             context['tasks'] = [model_to_dict(t) for t in subtasks]
             for d in context['tasks']:
@@ -147,12 +152,6 @@ class JobDetailView(LoginRequiredMixin, UserPassesTestMixin, DetailView):
                 except TypeError:
                     d['logfile']['logdata'] = 'Could not load logfile'
 
-                # if d.get('task_result'):
-                #     d.update(('task_result', model_to_dict(task.task_result, fields=['status', 'name'])) for task in subtasks)
-                    # d['task_result']['task_name'] = d['task_result']['task_name'].split('.')[-1]
-
-                # else:
-                #     d['task_result'] = {'status':'No result yet.'}
                 try:
                     taskresult = TaskResult.objects.get(task_id=d['task_id'])
                     d['task_result'] = model_to_dict(taskresult, fields=['status', 'result'])
@@ -296,3 +295,14 @@ def download_job(request, pk):
     response = FileResponse(zipf_)
     os.remove(zipf)
     return response
+
+
+@login_required
+def result_table(request, pk):
+    """"""
+    job = Job.objects.get(id=pk)
+    if not request.user == job.user:
+        return HttpResponseForbidden
+    filename = job.result_table
+    if filename:
+        return JsonResponse(pd.read_csv(filename).to_dict())

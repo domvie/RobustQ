@@ -33,6 +33,15 @@ from io import StringIO
 BASE_DIR = os.getcwd()
 
 
+
+# TODO 2 kardinalitäten - pofcalc zb max 15
+# pof result tabelle
+# upload input - choose file oder so
+# bei overview download button
+# zip upload
+# sortier indicator
+
+
 class Capturing(list):
     """Captures stdout of certain functions and saves them in a list"""
     def __enter__(self):
@@ -497,6 +506,7 @@ def pofcalc(self, result, job_id, cardinality, *args, **kwargs):
 
     logger.info(f'Calculating PoF up to d={d}')
 
+
     cmd_args = [os.path.join(BASE_DIR, 'bin/PoFcalc'),
                                          '-m', f'{model_name}.mcs.{comp_suffix}.binary',
                                          # '-o', f'{model_name}.mcs.comp',
@@ -542,13 +552,28 @@ def pofcalc(self, result, job_id, cardinality, *args, **kwargs):
             logger.error(err)
             raise Exception(err)
 
-        if 'Final PoF' in out.splitlines()[-1]:
+        out = out.splitlines() # convert to list for following steps
+        job = Job.objects.filter(id=job_id)
+
+        for i in range(len(out)):
+            if 'weight' in out[i]:
+                resulttable = out[i+2:i+2+cardinality]
+                colnames = list(x.strip() for x in out[i].split('|'))
+                result = list(map(lambda x: list(y.strip() for y in x.split('|')), resulttable))
+
+                import pandas as pd
+                df = pd.DataFrame(data=result, columns=colnames)
+                filepath = os.path.join(path, f'result_table_{model_name}.csv')
+                df.to_csv(filepath)
+                job.update(result_table=filepath)
+                break
+
+        if 'Final PoF' in out[-1]:
             # gets the result from the process output
             try:
-                pof_result = round(float(out.splitlines()[-1].split()[-1]), 4)
+                pof_result = round(float(out[-1].split()[-1]), 4)
             except ValueError:
-                pof_result = out.splitlines()[-1].split()[-1]
-            job = Job.objects.filter(id=job_id)
+                pof_result = out[-1].split()[-1]
             job.update(result=pof_result)  # stores the string of the result
 
         pofcalc_process.wait()
@@ -578,7 +603,8 @@ def abort_task(self, *args, **kwargs):
 
 
 @shared_task(bind=True, name="execute_pipeline", base=AbortableTask)
-def execute_pipeline(self, job_id, compression_checked, cardinality, make_consistent, *args, **kwargs):
+def execute_pipeline(self, job_id, compression_checked, cardinality_defi,
+                     cardinality_pof, make_consistent, *args, **kwargs):
     this_result = AbortableAsyncResult(self.request.id)
     if this_result.is_aborted() or this_result.status == 'REVOKED':
         return 'REVOKED'
@@ -592,9 +618,9 @@ def execute_pipeline(self, job_id, compression_checked, cardinality, make_consis
     result = chain(sbml_processing.s(job_id=job_id, make_consistent=make_consistent),
                    compress_network.s(job_id=job_id, do_compress=compression_checked),
                    create_dual_system.s(job_id=job_id, do_compress=compression_checked),
-                   defigueiredo.s(job_id=job_id, cardinality=cardinality, do_compress=compression_checked),
+                   defigueiredo.s(job_id=job_id, cardinality=cardinality_defi, do_compress=compression_checked),
                    mcs_to_binary.s(job_id=job_id, do_compress=compression_checked),
-                   pofcalc.s(job_id=job_id, cardinality=cardinality, do_compress=compression_checked),
+                   pofcalc.s(job_id=job_id, cardinality=cardinality_pof, do_compress=compression_checked),
                    update_db_post_run.s(job_id=job_id),
                    release_lock.s(),
                    send_result_email.s(job_id=job_id)
