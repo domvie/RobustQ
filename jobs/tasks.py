@@ -564,7 +564,7 @@ def pofcalc(self, result, job_id, cardinality, *args, **kwargs):
                 import pandas as pd
                 df = pd.DataFrame(data=result, columns=colnames)
                 filepath = os.path.join(path, f'result_table_{model_name}.csv')
-                df.to_csv(filepath)
+                df.to_csv(filepath, index=False)
                 job.update(result_table=filepath)
                 break
 

@@ -38,7 +38,7 @@ urlpatterns = [
     path('jobs/cancel/<int:pk>', job_views.cancel_job, name='cancel'),
     path('jobs/download_results/<str:type>', job_views.download_results, name='download_results'),
     path('jobs/download_job/<int:pk>', job_views.download_job, name='download_job'),
-    path('jobs/result_table/<int:pk>', job_views.result_table, name='result_table'),
+    path('jobs/result_table/<int:pk>/<str:type>', job_views.result_table, name='result_table'),
 
 ]
 

@@ -120,10 +120,7 @@ class JobDetailView(LoginRequiredMixin, UserPassesTestMixin, DetailView):
         job_dict['user'] = self.request.user
         job_dict.pop('ip')
         to_pop = []
-        rt = job.result_table
-        if rt:
-            context['rt'] = pd.read_csv(rt).to_json()
-
+        context['rt'] = job_dict.pop('result_table')
         for k, v in job_dict.items():
             if v is None:
                 to_pop.append(k)
@@ -298,11 +295,18 @@ def download_job(request, pk):
 
 
 @login_required
-def result_table(request, pk):
+def result_table(request, pk, type):
     """"""
     job = Job.objects.get(id=pk)
     if not request.user == job.user:
         return HttpResponseForbidden
     filename = job.result_table
     if filename:
-        return JsonResponse(pd.read_csv(filename).to_dict())
+        if type == 'json':
+            return HttpResponse(pd.read_csv(filename).to_json(orient='records', double_precision=15), content_type='application/json')
+        else:
+            response = HttpResponse(content_type='text/csv')
+            response['Content-Disposition'] = f'attachment; filename=result_table_{job.model_name}.csv'
+
+            pd.read_csv(filename).to_csv(path_or_buf=response, sep=';', index=False, decimal=".")
+            return response

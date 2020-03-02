@@ -38,7 +38,11 @@
                             </table>
 
                             {% if tasks %}
-                                <p class="h4">Task details</p>
+                                <p class="h4">Task details <a class="text text-secondary" onclick="toggle_tasks()">
+                                    <i class="fas fa-toggle-on" id="toggle_btn"> </i> </a> </p>
+
+
+                                <div id="subtasks">
                                 <small>Subtask {{ forloop.counter }}</small>
 
                                 {% for task in tasks %}
@@ -97,38 +101,49 @@
                                         {% endfor %}
                                     </table>
                                 {% endfor %}
+                            </div>
+
+                                <script>
+                                var toggle_btn = $('#toggle_btn');
+                                var subtasks = $('#subtasks');
+                                toggle_tasks = () => {
+                                    subtasks.toggle("slow");
+                                    toggle_btn.toggleClass('fa-toggle-on fa-toggle-off')
+                                }
+
+                                </script>
+
                             {% if rt %}
-                                <table id="table"
-                                       data-toggle="table"
-                                        data-ajax="ajaxHandler"
-                                data-url="{% url 'result_table' job.id %}">
-                                  <thead>
+                                <br>
+                                <label for="result_table" class="h2">Result
+                                    <a href="{% url 'result_table' job.id 'csv' %}" class="btn btn-sm btn-outline-secondary">
+                                        <i class="fas fa-download"></i></a>
+                                </label>
+                                <table id="result_table" class="table-striped" data-sortable="false"
+                                       data-toggle="result_table" data-url="{% url 'result_table' job.id 'json' %}">
+                                    <thead>
                                     <tr>
-                                      <th data-field="Unnamed">ID</th>
-                                      <th data-field="d">Item Name</th>
-                                      <th data-field="weight">Item Price</th>
-                                      <th data-field="F(D)">Item Price</th>
-                                      <th data-field="weighted F(d)">Item Price</th>
-                                      <th data-field="acc. weighted F(d)">Item Price</th>
-                                      <th data-field="lethal CS">Item Price</th>
-                                      <th data-field="possible CS">Item Price</th>
+                                      <th data-field="d" class="text-center">d</th>
+                                      <th data-field="weight" class="text-center">weight</th>
+                                      <th data-field="F(d)" class="text-center">F(d)</th>
+                                      <th data-field="weighted F(d)" class="text-center">weighted F(d)</th>
+                                      <th data-field="acc. weighted F(d)"  class="text-center">acc. weighted F(d)</th>
+                                      <th data-field="lethal CS" class="text-center">lethal CS</th>
+                                      <th data-field="possible CS" class="text-center">possible CS</th>
                                     </tr>
                                     </thead>
                                 </table>
                                 <script>
-                                    var restable = $('#result_table')
-                                    var url = "{% url 'result_table' job.id %}"
-                                    {#var data = [{{ rt|safe }}]#}
-                                    $(function() {
-                                        restable.bootstrapTable({url: url})
-                                     })
+                                // renders result table
+                                    var restable = $('#result_table');
+                                    var url = "{% url 'result_table' job.id 'json' %}";
                                     var data;
-                                    ajaxHandler = () => {
                                     $.get(url)
-                                        .then((response) => {data = JSON.stringify(response); console.log(data);})
-                                        .then((stuff) => console.log(stuff))
-                                    }
+                                        .then((response) => {data = response;
+                                        restable.bootstrapTable({data: data});
+                                         });
                                 </script>
+                                <br>
                             {% endif %}
                             {% endif %}
                             <a href="{% url 'jobs' %}" class="btn btn-sm btn-outline-secondary"><i
