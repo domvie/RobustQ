@@ -24,14 +24,14 @@ After successful setup make sure to run your migrations and start up your celery
 
 After account creation, You will need a valid SBML model. Supported filetypes are .xml, .json, or (in future versions) .zip. Simply upload your model, tweak the parameters to your liking and hit submit. This will queue the job and execute it accordingly (reminder: make sure you have your celery workers running. If you are unsure, head to the [official docs](https://docs.celeryproject.org/en/latest/getting-started/)).
 
-![Landing page](https://github.com/domvie/RobustQ/tree/master/static/img/index.png "Opening site")
+![Landing page](https://raw.githubusercontent.com/domvie/RobustQ/master/static/img/index.png "Opening site")
 
 You will be redirected to the overview site.
 
-![Overview](https://github.com/domvie/RobustQ/tree/master/static/img/over.png "Job Overview")
+![Overview](https://raw.githubusercontent.com/domvie/RobustQ/tree/master/static/img/over.png "Job Overview")
 
 And when your job is finished you can check and download the results by clicking on 'Details'.
 
-![Details](https://github.com/domvie/RobustQ/tree/master/static/img/results.png "Job Results")
+![Details](https://raw.githubusercontent.com/domvie/RobustQ/tree/master/static/img/results.png "Job Results")
 
 
