@@ -1,13 +1,12 @@
 from django.core.validators import ValidationError
 import libsbml
 from django.db.models.fields.files import FieldFile, FileField
-from django.conf import settings
 from django.core.files.uploadedfile import InMemoryUploadedFile
 import cobra
 
 
-def filesize_validator(value):
-    """ makes sure the uploaded """
+# def filesize_validator(value):
+#     """ makes sure the uploaded file doesnt exceed the maximum filesize"""
 
 
 def sbml_validator(value):

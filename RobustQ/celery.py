@@ -4,6 +4,10 @@ import os
 
 from celery import Celery
 
+
+"""Celery configuration file"""
+
+
 # set the default Django settings module for the 'celery' program.
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'RobustQ.settings')
 

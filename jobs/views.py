@@ -1,11 +1,11 @@
-from django.shortcuts import render, redirect, reverse
+from django.shortcuts import redirect
 from django.urls import reverse_lazy
 from django.contrib.auth.decorators import login_required
 from .forms import JobSubmissionForm, JobTable
 from django.views.generic import CreateView, DetailView, ListView, DeleteView
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.views.generic.edit import FormMixin
-from .models import Job, SubTask
+from .models import Job
 from ipware import get_client_ip
 from django.forms.models import model_to_dict
 from django.http import HttpResponse, HttpResponseForbidden, JsonResponse, FileResponse
@@ -18,30 +18,14 @@ from django.core.cache import cache
 from celery.contrib.abortable import AbortableAsyncResult
 import signal
 import os
-from django.utils import html
 from django.utils import timezone
 import pandas as pd
 import shutil
 from io import BytesIO as IO
-from RobustQ.celery import app
-
-
-# @login_required
-# def new(request):
-#     job_form = JobSubmissionForm(request.POST or None, request.FILES or None)
-#     if request.POST:
-#         print('INSIDE FUNC(POST)')
-#         print(request.FILES['file'])
-#         if job_form.is_valid():
-#             extended = job_form.save(commit=False)
-#             extended.user = request.user
-#             extended.file = request.FILES
-#             extended.save()
-#             return redirect('jobs')
-#     return render(request, 'jobs/new.html', context={'job_form': job_form})
 
 
 class NewJobView(LoginRequiredMixin, CreateView, FormMixin):
+    """Class based view for creating a new job (input form)"""
     model = Job
     template_name = 'jobs/new.html'
     form_class = JobSubmissionForm
@@ -65,6 +49,7 @@ class NewJobView(LoginRequiredMixin, CreateView, FormMixin):
 
 
 class JobOverView(LoginRequiredMixin, SingleTableView, ListView):
+    """Class based job overview"""
     # paginate_by = 10
     template_name = 'jobs/overview.html'
     form_class = JobTable
@@ -77,10 +62,7 @@ class JobOverView(LoginRequiredMixin, SingleTableView, ListView):
     def get_context_data(self, *, object_list=None, **kwargs):
         context = super().get_context_data(**kwargs)
         jobs = self.request.user.job_set.all()
-        # self.queryset = jobs
-        self.table = JobTable(jobs)
-        # table.paginate(self.request.GET.get("page", 1), per_page=25)
-        # context['table'] = self.table
+        self.table = JobTable(jobs)  # -> table defined in forms.py
         context['running_jobs'] = jobs.filter(is_finished='False')
         context['jobs'] = jobs
 
@@ -106,14 +88,18 @@ class JobOverView(LoginRequiredMixin, SingleTableView, ListView):
 
 
 class JobDetailView(LoginRequiredMixin, UserPassesTestMixin, DetailView):
+    """Class based job detail view"""
     model = Job
     template_name = 'jobs/details.html'
 
     def test_func(self):
+        #  Test function for UserPassesTestMixin
         job = self.get_object()
         return True if self.request.user == job.user else False
 
     def get_context_data(self, *, object_list=None, **kwargs):
+        """Gets all job info (subtasks) to the corresponding user/job, converts them to dict format
+        and adds them to template context"""
         context = super().get_context_data(**kwargs)
         job = context['object']
         job_dict = model_to_dict(job)
@@ -163,34 +149,22 @@ class JobDetailView(LoginRequiredMixin, UserPassesTestMixin, DetailView):
 
 
 class JobDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteView):
+    """View when User wants to delete a job"""
     model = Job
 
     def test_func(self):
+        # Test function for UserPassesTestMixin
         job = self.get_object()
         return True if self.request.user == job.user else False
 
     success_url = '/'
 
 
-# @login_required
-# def overview(request):
-#     jobs = request.user.job_set.all()
-#     table = JobTable(jobs)
-#     running_jobs = jobs.filter(is_finished='False')
-#     context = {'jobs': jobs,
-#                'running_jobs': running_jobs,
-#                'table': table
-#                }
-#     return render(request, 'jobs/overview.html', context=context)
-#
-#
-# @login_required
-# def details(request, pk):
-#     job = request.user.job_set.get(id=pk)
-#     return render(request, 'jobs/details.html', context={'job': job})
-
 @login_required
 def cancel_job(request, pk):
+    """A view function that cancels the specified job. If its not running,
+    it will revoke all celery tasks connected to it; if its currently executing, it
+    will revoke any remaining tasks and terminate the running task with os.kill(pid)"""
     job = Job.objects.get(id=pk)
 
     if not request.user == job.user:
@@ -233,24 +207,19 @@ def cancel_job(request, pk):
     except KeyError:
         return JsonResponse({'not found': True})
 
-    # subtasks = SubTask.objects.filter(job_id=pk)
-    # for task in subtasks:
-    #     taskstatus = task.task_result.status
-    #     if taskstatus == 'PENDING':
-    #         res = AsyncResult(task.id)
-    #         print(task.id)
-    #         # res.revoke(terminate=True)
-    #         return JsonResponse({'success':True})
-
-
-
-    # json = serialize('json', {'job': pk})
     return JsonResponse({'0': 0})
 
 
 @login_required
 def download_results(request, type):
-    """ """
+    """
+    Args:
+        request: Django request
+        type: (str) 'csv' or 'excel'
+
+    Returns: HttpResponse for file download
+    Gathers all results and serves them as a downloadable csv/xl file
+    """
     jobs = Job.objects.filter(user=request.user, is_finished=True, status='Done')
     data = jobs.values('model_name', 'result', 'cardinality', 'compression', 'make_consistent', 'reactions',
                        'metabolites', 'genes', 'objective_expression', 'duration')
@@ -282,7 +251,8 @@ def download_results(request, type):
 
 @login_required
 def download_job(request, pk):
-    """ """
+    """Returns: FileResponse
+    Serves a zip file with all logs/files from a job"""
     job = Job.objects.get(id=pk)
     if not request.user == job.user:
         return HttpResponseForbidden
@@ -296,7 +266,16 @@ def download_job(request, pk):
 
 @login_required
 def result_table(request, pk, type):
-    """"""
+    """
+    Args:
+        request: Django request
+        pk: job id
+        type: (str) 'json' or 'csv'
+
+    Returns: Json Http response or HttpResponse with csv file attached (download)
+    JSON is for the result table in the detailview (ajax API call)
+    CSV for user download
+    """
     job = Job.objects.get(id=pk)
     if not request.user == job.user:
         return HttpResponseForbidden

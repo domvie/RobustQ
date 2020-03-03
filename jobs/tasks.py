@@ -2,11 +2,7 @@ from __future__ import absolute_import, unicode_literals
 from celery import shared_task
 from .models import Job, SubTask
 from RobustQ.celery import app
-# from multiprocessing import Pool
-from billiard.pool import Pool
-from multiprocessing import cpu_count
 import time
-import random
 from django.utils import timezone
 from datetime import timedelta
 import subprocess
@@ -19,20 +15,15 @@ import numpy as np
 from django.core.cache import cache
 import shutil
 from celery import chain
-from celery.schedules import crontab
 from celery.contrib.abortable import AbortableTask, AbortableAsyncResult
-from celery.result import AsyncResult
 import threading
 from .custom_wraps import revoke_chain_authority, RevokeChainRequested
 from django.conf import settings
-import io
 from django.core.mail import send_mail
 from io import StringIO
 
 
 BASE_DIR = os.getcwd()
-
-
 
 # TODO 2 kardinalitäten - pofcalc zb max 15
 # pof result tabelle
@@ -56,6 +47,7 @@ class Capturing(list):
 
 
 def log_subprocess_output(pipe, logger=None):
+    """logs stdout from a subprocess pipe to the individual task logger"""
     formatter_new = logging.Formatter('[%(asctime)s] %(message)s')
     # change logger format temporarily while reading stdout - dirty solution?
     for loggr in logger.handlers:
@@ -68,6 +60,8 @@ def log_subprocess_output(pipe, logger=None):
 
 
 def check_abort_state(task_id, proc, logger):
+    """checks if a task gets revoked/aborted
+    if it does, try to kill the subprocess"""
     result = AbortableAsyncResult(task_id)
     if result.is_aborted() or result.state == 'REVOKED':
         # respect aborted state, and terminate gracefully
@@ -85,7 +79,9 @@ def call_repeatedly(secs, func, task_id, proc, logger):
 
 @app.task(ignore_result=True)
 def cleanup_expired_results():
-    """ """
+    """Beat scheduled task, gets executed periodically. Removes expired results (after x amount of days,
+    specified in the settings) and deletes corresponding files
+    """
     # objects older than x (default 14) days will be deleted
     expired = timezone.now() - timedelta(days=settings.DAYS_UNTIL_JOB_DELETE)
     print(f'Deleting expired jobs. All jobs, that have started before {expired} will be deleted now.')
@@ -97,7 +93,7 @@ def cleanup_expired_results():
     # TODO delete taskresults?
 
 
-# Celery app scheduler
+# Celery app scheduler for periodically scheduled task
 app.conf.beat_schedule = {
     'cleanup': {
         'task': 'jobs.tasks.cleanup_expired_results',
@@ -127,6 +123,7 @@ def setup_process(self, result, job_id, *args, **kwargs):
 
 @shared_task(bind=True, name="update_db")
 def update_db_post_run(self, result=None, job_id=None, *args, **kwargs):
+    """updates database entries after a (sub)task is finished. Updates duration, status, finish time"""
     job = Job.objects.filter(id=job_id)
     finished_date = timezone.now()
     duration = finished_date - job.get().start_date
@@ -137,8 +134,9 @@ def update_db_post_run(self, result=None, job_id=None, *args, **kwargs):
     job.update(is_finished=True, finished_date=finished_date, status="Done", result=result, duration=duration)
 
 
-@shared_task(bind=True, name="result_email")
+@shared_task(bind=True, name="result_email")  # TODO
 def send_result_email(self, result, job_id=None, *args, **kwargs):
+    """Mock SMTP result mail"""
     job = Job.objects.get(id=job_id)
 
     print(f'Trying to send email to {job.user.email}')
@@ -158,7 +156,8 @@ def send_result_email(self, result, job_id=None, *args, **kwargs):
 
 @shared_task(bind=True, name="SBML_processing")
 def sbml_processing(self, job_id=None, make_consistent=False, *args, **kwargs):
-    """ """
+    """First task in the workflow. Extracts info from the SBML file and if specified,
+    tries to make model consistent. Writes info to files and returns the objective biomass rxn"""
     import cobra
 
     logger, fpath, path, fname, model_name, extension = setup_process(self, job_id=job_id, result=None, *args, **kwargs)
@@ -264,7 +263,8 @@ def sbml_processing(self, job_id=None, make_consistent=False, *args, **kwargs):
 @shared_task(bind=True, name="compress_network", base=AbortableTask)
 @revoke_chain_authority
 def compress_network(self, result, job_id, *args, **kwargs):
-    """ """
+    """If specified, compresses the metabolic model. This essentially runs
+    the perl scripts that takes care of it as a subprocess"""
 
     logger, fpath, path, fname, model_name, extension = setup_process(self, job_id=job_id, result=result, *args,
                                                                       **kwargs)
@@ -327,7 +327,7 @@ def compress_network(self, result, job_id, *args, **kwargs):
 @shared_task(bind=True, name="create_dual_system")
 @revoke_chain_authority
 def create_dual_system(self, result, job_id, *args, **kwargs):
-    """ """
+    """Create a dual system EFM/MCS for the following MCS calculation"""
 
     logger, fpath, path, fname, model_name, extension = setup_process(self, job_id=job_id, result=result, *args,
                                                                       **kwargs)
@@ -389,7 +389,8 @@ def create_dual_system(self, result, job_id, *args, **kwargs):
 @shared_task(bind=True, name="defigueiredo", base=AbortableTask)
 @revoke_chain_authority
 def defigueiredo(self, result, job_id, cardinality, *args, **kwargs):
-    """"""
+    """Calls the defigueiredo binary with the specified arguments. This subprocess
+    can take multiple hours to complete, especially with a higher cardinality"""
 
     logger, fpath, path, fname, model_name, extension = setup_process(self, job_id=job_id, result=result, *args,
                                                                       **kwargs)
@@ -442,15 +443,14 @@ def defigueiredo(self, result, job_id, cardinality, *args, **kwargs):
 
     os.chdir(BASE_DIR)
 
-    # if defigueiredo_process.returncode:
-    #     raise RevokeChainRequested(f'Process {self.name} had non-zero exit status')
-
     return defigueiredo_process.returncode
 
 
 @shared_task(bind=True, name="mcs_to_binary")
 def mcs_to_binary(self, result, job_id, *args, **kwargs):
-    """ """
+    """converts the MCS found by defigeuiredo to a binary representation. Also calls a subprocess,
+    short runtime
+    """
     logger, fpath, path, fname, model_name, extension = setup_process(self, job_id=job_id, result=result, *args,
                                                                       **kwargs)
 
@@ -495,7 +495,9 @@ def mcs_to_binary(self, result, job_id, *args, **kwargs):
 @shared_task(bind=True, name="PoFcalc", base=AbortableTask)
 @revoke_chain_authority
 def pofcalc(self, result, job_id, cardinality, *args, **kwargs):
-    """ """
+    """The 'main' task - calculates the Failure probability of the given network.
+    Calls the PoFcalc executable as a subprocess and once its finished, processes the stdout
+    to extract and save the results"""
     logger, fpath, path, fname, model_name, extension = setup_process(self, job_id=job_id, result=result, *args,
                                                                       **kwargs)
 
@@ -591,7 +593,7 @@ def pofcalc(self, result, job_id, cardinality, *args, **kwargs):
 
 
 @shared_task(bind=True, name="release_lock")
-def release_lock(self, *args, **kwargs):
+def release_lock(self, *args, **kwargs):  # currently not used
     cache.delete("running_job")
 
 
@@ -605,6 +607,23 @@ def abort_task(self, *args, **kwargs):
 @shared_task(bind=True, name="execute_pipeline", base=AbortableTask)
 def execute_pipeline(self, job_id, compression_checked, cardinality_defi,
                      cardinality_pof, make_consistent, *args, **kwargs):
+    """
+    Executes the pipeline for Pof calculation. Creates a celery chain from all tasks and calls it.
+    Blocks celery workers from picking up another job until the execution is finished to ensure
+    consecutive execution of the jobs passed to the queue
+    Args:
+        self: task object, passed from celery
+        job_id: job id
+        compression_checked: (bool) whether or not to compress the network
+        cardinality_defi: (int) the cardinality specified for defigeuriedo process
+        cardinality_pof: (int) cardinality specified for PoFcalc process
+        make_consistent: (bool) whether or not to attempt to make network consistent
+        *args:
+        **kwargs:
+
+    Returns: AsyncResult
+
+    """
     this_result = AbortableAsyncResult(self.request.id)
     if this_result.is_aborted() or this_result.status == 'REVOKED':
         return 'REVOKED'

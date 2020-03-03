@@ -10,6 +10,8 @@ from .formatChecker import ContentTypeRestrictedFileField
 from django.conf import settings
 import os
 
+"""defines Django database models"""
+
 
 def user_directory_path(instance, filename):
     # file will be uploaded to MEDIA_ROOT/<user_id>/<filename>
@@ -24,10 +26,10 @@ def givemetimezone():
 
 
 class Job(models.Model):
+    """The basic Job model. """
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     submit_date = models.DateTimeField(default=timezone.now)
     start_date = models.DateTimeField(null=True, blank=True)
-    # expiry_date = models.DateTimeField(null=True, blank=True)
     is_finished = models.BooleanField(default=False)
     finished_date = models.DateTimeField(blank=True, null=True)
     ip = models.GenericIPAddressField(null=True)
@@ -35,7 +37,6 @@ class Job(models.Model):
     cardinality_defigueiredo = models.IntegerField(default=2, verbose_name='Cardinality MCS')
     cardinality_pof = models.IntegerField(default=10, verbose_name='Cardinality PoF')
     make_consistent = models.BooleanField(default=False)
-    # total_subtasks = models.IntegerField(null=True)
     reactions = models.IntegerField(null=True)
     metabolites = models.IntegerField(null=True)
     genes = models.IntegerField(null=True)
@@ -47,7 +48,6 @@ class Job(models.Model):
     task_id_job = models.CharField(max_length=50, null=True)
     model_name = models.CharField(max_length=50, null=True)
     result_table = models.CharField(max_length=250, null=True)
-    # model_name = models.CharField(max_length=50, null=True)
     sbml_file = ContentTypeRestrictedFileField(upload_to=user_directory_path, content_types=['text/xml',
                                                                                              'application/json',
                                                                                              'text/sbml'],

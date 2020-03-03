@@ -18,6 +18,8 @@ In order to run celery you will need a message broker. I use RabbitMQ, [other se
 
 The binaries and scripts for the computational pipeline are provided. You may need to install certain perl modules.
 
+To run the server type `python3 manage.py runserver` and head to http://localhost:8000/
+
 After successful setup make sure to run your migrations and start up your celery worker. By default, I use two workers with `--concurrency=1`. You may set these up in whatever way you like though, and performance may be improved by increasing concurrency setting. Keep in mind however, certain tasks (such as the MCS count) take a lot of resources and should not be run in parallel.
 
 ## Usage
@@ -30,7 +32,7 @@ You will be redirected to the overview site.
 
 ![Overview](static/img/overview.png?raw=true "Job Overview")
 
-And when your job is finished you can check and download the results (the PoF) by clicking on 'Details'.
+When your job is finished you can check and download the results (the PoF) by clicking on 'Details'.
 
 ![Details](static/img/results.png?raw=true "Job Results")
 

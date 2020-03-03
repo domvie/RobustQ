@@ -3,14 +3,10 @@ from .models import Job
 import django_tables2 as tables
 from django.utils import timezone
 import itertools
-from .models import user_directory_path, FileExtensionValidator
-from .validators import sbml_validator
 
 
 class JobSubmissionForm(forms.ModelForm):
-
-    # sbml_file = forms.FileField(validators=[FileExtensionValidator(allowed_extensions=['sbml', 'xml'],
-    #                                                                 message='Wrong file type!'), sbml_validator])
+    """Job submission form class. Details on how to render the form based on the Job model"""
     class Meta:
         model = Job
         fields = ['sbml_file', 'compression', 'cardinality_defigueiredo', 'cardinality_pof', 'make_consistent']
@@ -34,7 +30,7 @@ class JobSubmissionForm(forms.ModelForm):
 
 
 class JobTable(tables.Table):
-
+    """represents the overview table. Methods mainly on how and what to render"""
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.counter = itertools.count(start=1)
@@ -103,6 +99,3 @@ class JobTable(tables.Table):
             }
         }
         order_by = "-id"
-        # row_attrs = {
-        #     "href": lambda record: "jobs/details/"+str(record.pk)
-        # }

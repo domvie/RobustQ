@@ -2,6 +2,8 @@ from functools import wraps
 from celery.result import AsyncResult
 from celery.utils.log import get_task_logger
 
+"""custom revoke chain Exception"""
+
 
 class RevokeChainRequested(Exception):
     def __init__(self, return_value):

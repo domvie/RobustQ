@@ -1,12 +1,9 @@
 from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
-from django.utils import timezone
 from jobs.models import Job, SubTask
 from .tasks import execute_pipeline
 from django_celery_results.models import TaskResult
 from celery.signals import task_postrun, after_task_publish, task_prerun, task_failure, celeryd_init, task_revoked
-from celery import chain
-from celery.result import AsyncResult
 import os
 from celery.utils.log import get_task_logger
 import logging
@@ -16,26 +13,29 @@ import sys
 from django.core.cache import cache
 from django.conf import settings
 
+"""All signals connected to task execution are handled here, including celery worker signals
+"""
 
-timer = {}
-
-# signal_tasks = [update_db_post_run, pofcalc, sbml_processing, compress_network, create_dual_system,
-#                 defigueiredo, mcs_to_binary]
+timer = {}  # will be used for tracking task execution times
 
 
 @receiver(post_save, sender=Job)
 def start_job(sender, instance, created, **kwargs):
-    if created:
+    """gets triggered when a job is saved (aka when the user submits a job)
+    sends the entire task pipeline to the message queue for execution"""
+    if created:  # to avoid recursive calls
         pass
 
     sender.objects.filter(id=instance.id).update(status='Queued')
 
+    # get params
     id = instance.id
     compression_checked = instance.compression
     cardinality_defi = instance.cardinality_defigueiredo
     cardinality_pof = instance.cardinality_pof
     make_consistent = instance.make_consistent
 
+    # Send the task to the celery worker
     execute_pipeline.apply_async(kwargs={'job_id':id,
                                          'compression_checked':compression_checked,
                                          'cardinality_defi':cardinality_defi,
@@ -43,16 +43,15 @@ def start_job(sender, instance, created, **kwargs):
                                          'make_consistent':make_consistent},
                                  queue='jobs')
 
-    # TODO ideas: databasetable with queue, queues, improved lock mechanism,
 
-
+#  these tasks are ignored by the signal handlers
 excluded_tasks = ['jobs.tasks.cleanup_expired_results', 'update_db', 'result_email', 'release_lock',
                   'abort_task']
 
 
 @receiver(post_save, sender=TaskResult)
 def add_task_info(sender, instance, created, **kwargs):
-    """ connects TaskResult and SubTask """
+    """ connects TaskResult and SubTask models """
 
     task = SubTask.objects.filter(task_id=instance.task_id)
     if task:
@@ -63,9 +62,12 @@ def add_task_info(sender, instance, created, **kwargs):
 
 @task_prerun.connect
 def task_prerun_handler(sender=None, task_id=None, task=None, *args, **kwargs):
+    """gets run before every task is executed by a worker. Mainly to set up logging for every
+    individual task, define and save user paths and create the corresponding SubTask object"""
     if sender.name in excluded_tasks:
         return
 
+    # starts the timer - gets popped in postrun_handler
     timer[task_id] = time()
 
     job_id = kwargs['kwargs']['job_id']
@@ -120,13 +122,14 @@ def task_prerun_handler(sender=None, task_id=None, task=None, *args, **kwargs):
     logger.addHandler(task_handler)
     logger.addHandler(public_log_handler)
     logger.info(f'Starting task id {task_id} for task {task.name}')
-    # task = SubTask.objects.filter(task_id=task_id)
 
     SubTask.objects.create(job=job, user=job.user, task_id=task_id, name=task.name, logfile_path=user_task_logfile_path)
 
 
 @task_postrun.connect
 def task_postrun_handler(sender, task_id, task, retval, state, *args,  **kwargs):
+    """As the name suggests, fires after the task is finished by the worker. Log results, exc time,
+    cleanup, update states"""
     if sender.name in excluded_tasks:
         return
 
@@ -135,10 +138,6 @@ def task_postrun_handler(sender, task_id, task, retval, state, *args,  **kwargs)
         cost = time() - timer.pop(task_id)
     except KeyError:
         cost = -1
-    # task = SubTask.objects.filter(task_id=task_id)  # returns QuerySet
-    # job = Job.objects.filter(id=task.get().job_id)
-    # job.update(is_finished=True)
-    # getting the same logger created in prerun handler and closilogging.getLoggerng all handles associated with it
     logger = get_task_logger(task_id)
     logger.info("%s ran for %s", task.__name__, str(datetime.timedelta(seconds=cost)))
 
@@ -159,6 +158,7 @@ def task_postrun_handler(sender, task_id, task, retval, state, *args,  **kwargs)
 
 @task_failure.connect
 def task_failure_handler(sender=None, task_id=None, exception=None, *args, **kwargs):
+    """if a task fails, try to log what happened"""
     task = SubTask.objects.filter(task_id=task_id).get()
     job = Job.objects.filter(id=task.job.id)
     job.update(status="Failure", is_finished=True)
@@ -169,11 +169,13 @@ def task_failure_handler(sender=None, task_id=None, exception=None, *args, **kwa
 
 @celeryd_init.connect
 def worker_init(sender, instance, conf, options, **kwargs):
+    """this removes the lock on the worker (currently useless)"""
     cache.delete('running_job')
 
 
 @task_revoked.connect(sender="execute_pipeline")
 def task_revoked_handler(request, terminated, signum, expired, *args, **kwargs):
+    """fires when a task is revoked - i.e. when user it manually or the execution chain fails"""
     job_id = kwargs['job_id']
     job = Job.objects.filter(id=job_id)
     job.update(status="Cancelled", is_finished=True)
