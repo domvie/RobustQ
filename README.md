@@ -1,6 +1,6 @@
 # RobustQ
 
-a web service to quantify cellular robustness
+a web service to quantify cellular robustness. 
 
 ## Requirements
 
@@ -28,9 +28,9 @@ After account creation, You will need a valid SBML model. Supported filetypes ar
 
 You will be redirected to the overview site.
 
-![Overview](static/img/over.png?raw=true "Job Overview")
+![Overview](static/img/overview.png?raw=true "Job Overview")
 
-And when your job is finished you can check and download the results by clicking on 'Details'.
+And when your job is finished you can check and download the results (the PoF) by clicking on 'Details'.
 
 ![Details](static/img/results.png?raw=true "Job Results")
 
