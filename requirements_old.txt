@@ -5,7 +5,4 @@ sudo apt install apache2 mariadb-server libmariadbclient-dev php libapache2-mod-
 pip3 install virtualenv django jinja2 requests python-libsbml mysqlclient
 
 
-For Pipeline:
-C libs: CPLEX
-
 Perl modules: Math::Fraction, Math::MatrixFraction + autosplix
