@@ -50,8 +50,9 @@ class Job(models.Model):
     result_table = models.CharField(max_length=250, null=True)
     sbml_file = ContentTypeRestrictedFileField(upload_to=user_directory_path, content_types=['text/xml',
                                                                                              'application/json',
-                                                                                             'text/sbml'],
-                                 validators=[FileExtensionValidator(allowed_extensions=['sbml', 'xml', 'json'],
+                                                                                             'text/sbml',
+                                                                                             'application/zip'],
+                                 validators=[FileExtensionValidator(allowed_extensions=['sbml', 'xml', 'json', 'zip'],
                                                                     message='Wrong file type!'), sbml_validator],
                                  verbose_name='File', max_upload_size=settings.MAX_UPLOAD_SIZE)
 

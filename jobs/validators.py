@@ -16,6 +16,7 @@ def sbml_validator(value):
     :return: FileField object or ValidationError
     """
     # TODO implement cobra variant?
+    print('INSIDE VALIDATOR FOR', value)
     try:
         reader = libsbml.SBMLReader()
         if isinstance(value, FileField):
@@ -64,7 +65,7 @@ def sbml_validator(value):
     #     print(te.args)
     #     return value
     except Exception as e:
-        # import ipdb
-        # breakpoint()
+        import ipdb
+        ipdb.set_trace()
         raise ValidationError(message=e.args[0], code='sbml_validation_exception',
                               params={'error':e.args[0], 'line': '?'})

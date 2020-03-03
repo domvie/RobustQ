@@ -1,5 +1,5 @@
 from django.shortcuts import redirect
-from django.urls import reverse_lazy
+from django.urls import reverse_lazy, reverse
 from django.contrib.auth.decorators import login_required
 from .forms import JobSubmissionForm, JobTable
 from django.views.generic import CreateView, DetailView, ListView, DeleteView
@@ -8,7 +8,7 @@ from django.views.generic.edit import FormMixin
 from .models import Job
 from ipware import get_client_ip
 from django.forms.models import model_to_dict
-from django.http import HttpResponse, HttpResponseForbidden, JsonResponse, FileResponse
+from django.http import HttpResponse, HttpResponseForbidden, JsonResponse, FileResponse, HttpResponseRedirect
 from django_celery_results.models import TaskResult
 from celery.result import AsyncResult
 from django_tables2.views import SingleTableView
@@ -22,7 +22,12 @@ from django.utils import timezone
 import pandas as pd
 import shutil
 from io import BytesIO as IO
-
+from django.core.files import File
+from zipfile import ZipFile
+from django.core.files.uploadedfile import InMemoryUploadedFile
+from django.utils.datastructures import MultiValueDict
+from django.core.files.uploadhandler import TemporaryFileUploadHandler
+from django.forms import formset_factory
 
 class NewJobView(LoginRequiredMixin, CreateView, FormMixin):
     """Class based view for creating a new job (input form)"""
@@ -31,6 +36,8 @@ class NewJobView(LoginRequiredMixin, CreateView, FormMixin):
     form_class = JobSubmissionForm
     context_object_name = 'job_form'
     success_url = reverse_lazy('jobs')
+    formlist = []
+    objectlist = []
 
     def get_success_url(self):
         return '/jobs/'
@@ -40,6 +47,44 @@ class NewJobView(LoginRequiredMixin, CreateView, FormMixin):
         context['job_form'] = context['form']
         context['max_upload'] = filesizeformat(settings.MAX_UPLOAD_SIZE)
         return context
+
+    # Overriding the post method
+    def post(self, request, *args, **kwargs):
+        file = request.FILES['sbml_file']
+        # check extension
+        filename, ext = os.path.splitext(file.name)
+        if ext == '.zip':
+            myzip = ZipFile(file.file)
+            filelist = myzip.namelist()
+            JobFormSet = formset_factory(JobSubmissionForm)
+            formset = JobFormSet()
+            for model in filelist:
+                model_name, ext = os.path.splitext(model)
+                if ext.replace('.', '') not in settings.ALLOWED_EXTENSIONS:
+                    continue
+                f = myzip.open(model)
+                file_size = myzip.getinfo(model).file_size
+                file_dict = MultiValueDict()
+                temp_file_handler = TemporaryFileUploadHandler(request)  # manually instantiate and create a
+                # TempUploadedFile object
+                # see https://docs.djangoproject.com/en/3.0/_modules/django/core/files/uploadhandler/
+
+                temp_file_handler.new_file(field_name='sbml_file', file_name=f.name, content_type='text/xml',
+                                           content_length=file_size, charset=None)
+                temp_file_handler.file.write(f.read())
+                file_dict['sbml_file'] = temp_file_handler.file
+                # InMemoryUploadedFile(f, 'sbml_file', f.name, 'text/xml', file_size, charset='utf-8')
+                # manually create a form object from each file in zip
+                temp_form = JobSubmissionForm(request.POST, file_dict)
+                formset.forms.append(temp_form)
+                if temp_form.is_valid():
+                    temp_form.instance.user = self.request.user
+                    self.formlist.append(temp_form)
+                    self.objectlist.append(temp_form.save())
+            return HttpResponseRedirect(self.get_success_url())
+
+        else:
+            return super().post(self, request, *args, **kwargs)
 
     def form_valid(self, form):
         client_ip, is_routable = get_client_ip(self.request)
