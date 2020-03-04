@@ -67,6 +67,10 @@ def check_abort_state(task_id, proc, logger):
         # respect aborted state, and terminate gracefully
         logger.warning('Task aborted')
         proc.kill()
+        try:
+            os.kill(proc.pid)
+        except:
+            pass
         logger.warning('Task killed')
         raise ChildProcessError(f'Task with PID {proc.pid} aborted by user')
 
@@ -508,7 +512,6 @@ def pofcalc(self, result, job_id, cardinality, *args, **kwargs):
 
     logger.info(f'Calculating PoF up to d={d}')
 
-
     cmd_args = [os.path.join(BASE_DIR, 'bin/PoFcalc'),
                                          '-m', f'{model_name}.mcs.{comp_suffix}.binary',
                                          # '-o', f'{model_name}.mcs.comp',
@@ -546,7 +549,10 @@ def pofcalc(self, result, job_id, cardinality, *args, **kwargs):
         logger.info(f'Starting {self.request.task} with the following arguments: {" ".join(cmd_args)}')
 
         pofcalc_process = subprocess.Popen(cmd_args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-
+        cache.set("running_task_pid", pofcalc_process.pid)
+        threading.Thread(target=call_repeatedly, args=(3, check_abort_state, self.request.id, pofcalc_process,
+                                                       logger)).start()
+        pofcalc_process.wait()
         out, err = pofcalc_process.communicate()
         out = out.decode('utf-8').strip().strip('\"').replace(r'\n', '\n')
         logger.info(out)
@@ -578,7 +584,6 @@ def pofcalc(self, result, job_id, cardinality, *args, **kwargs):
                 pof_result = out[-1].split()[-1]
             job.update(result=pof_result)  # stores the string of the result
 
-        pofcalc_process.wait()
         logger.info(f'Finished!')
     except Exception as e:
         logger.error(repr(e))

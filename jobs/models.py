@@ -52,7 +52,7 @@ class Job(models.Model):
                                                                                              'application/json',
                                                                                              'text/sbml',
                                                                                              'application/zip'],
-                                 validators=[FileExtensionValidator(allowed_extensions=['sbml', 'xml', 'json', 'zip'],
+                                 validators=[FileExtensionValidator(allowed_extensions=settings.ALLOWED_EXTENSIONS,
                                                                     message='Wrong file type!'), sbml_validator],
                                  verbose_name='File', max_upload_size=settings.MAX_UPLOAD_SIZE)
 

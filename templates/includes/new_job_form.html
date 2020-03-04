@@ -15,8 +15,10 @@
             {% csrf_token %}
                 <fieldset class="form-group">
                     <legend class="border-bottom mb-4">Start New Job</legend>
-                        <label for="id_sbml_file_Addon01" class="label">Please upload your model in valid SBML format.
-                        Size must be <{{ max_upload }}, allowed extensions: <code>.xml, .json, .sbml</code></label>
+                        <label for="id_sbml_file_Addon01" class="label">Please upload your model(s) in valid SBML format.
+                        Size must be <{{ max_upload }}, allowed file extensions: <code>{{ allowed_ext }}</code></label>
+                <br><small>Note: only valid models in .xml format will be queued from uploaded ZIP archives. If it does not show up,
+                try to upload the file itself.</small>
                         <div class="input-group">
                           <div class="input-group-prepend">
                             <span class="input-group-text" id="id_sbml_file_Addon01">Choose model</span>

@@ -17,7 +17,7 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
-    path('', views.home, name='index-home'),
+    path('', views.IndexView.as_view(), name='index-home'),
     path('about/', views.about, name='index-about'),
 
 ]

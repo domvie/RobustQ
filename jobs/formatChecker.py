@@ -25,7 +25,7 @@ class ContentTypeRestrictedFileField(FileField):
             self.content_types = kwargs.pop("content_types")
             self.max_upload_size = kwargs.pop("max_upload_size")
         except KeyError:
-            self.content_types = ['text/xml', 'application/json', 'text/sbml']
+            self.content_types = ['text/xml', 'application/json', 'text/sbml', 'application/zip']
             self.max_upload_size = settings.MAX_UPLOAD_SIZE
 
         super(ContentTypeRestrictedFileField, self).__init__(*args, **kwargs)

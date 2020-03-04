@@ -22,12 +22,11 @@ from django.utils import timezone
 import pandas as pd
 import shutil
 from io import BytesIO as IO
-from django.core.files import File
 from zipfile import ZipFile
-from django.core.files.uploadedfile import InMemoryUploadedFile
 from django.utils.datastructures import MultiValueDict
 from django.core.files.uploadhandler import TemporaryFileUploadHandler
-from django.forms import formset_factory
+from django.core.validators import ValidationError
+
 
 class NewJobView(LoginRequiredMixin, CreateView, FormMixin):
     """Class based view for creating a new job (input form)"""
@@ -36,8 +35,8 @@ class NewJobView(LoginRequiredMixin, CreateView, FormMixin):
     form_class = JobSubmissionForm
     context_object_name = 'job_form'
     success_url = reverse_lazy('jobs')
-    formlist = []
-    objectlist = []
+    form_list = []
+    object = None
 
     def get_success_url(self):
         return '/jobs/'
@@ -46,6 +45,7 @@ class NewJobView(LoginRequiredMixin, CreateView, FormMixin):
         context = super().get_context_data(**kwargs)
         context['job_form'] = context['form']
         context['max_upload'] = filesizeformat(settings.MAX_UPLOAD_SIZE)
+        context['allowed_ext'] = ',.'.join(settings.ALLOWED_EXTENSIONS)
         return context
 
     # Overriding the post method
@@ -53,36 +53,9 @@ class NewJobView(LoginRequiredMixin, CreateView, FormMixin):
         file = request.FILES['sbml_file']
         # check extension
         filename, ext = os.path.splitext(file.name)
+        print(filename, ext)
         if ext == '.zip':
-            myzip = ZipFile(file.file)
-            filelist = myzip.namelist()
-            JobFormSet = formset_factory(JobSubmissionForm)
-            formset = JobFormSet()
-            for model in filelist:
-                model_name, ext = os.path.splitext(model)
-                if ext.replace('.', '') not in settings.ALLOWED_EXTENSIONS:
-                    continue
-                f = myzip.open(model)
-                file_size = myzip.getinfo(model).file_size
-                file_dict = MultiValueDict()
-                temp_file_handler = TemporaryFileUploadHandler(request)  # manually instantiate and create a
-                # TempUploadedFile object
-                # see https://docs.djangoproject.com/en/3.0/_modules/django/core/files/uploadhandler/
-
-                temp_file_handler.new_file(field_name='sbml_file', file_name=f.name, content_type='text/xml',
-                                           content_length=file_size, charset=None)
-                temp_file_handler.file.write(f.read())
-                file_dict['sbml_file'] = temp_file_handler.file
-                # InMemoryUploadedFile(f, 'sbml_file', f.name, 'text/xml', file_size, charset='utf-8')
-                # manually create a form object from each file in zip
-                temp_form = JobSubmissionForm(request.POST, file_dict)
-                formset.forms.append(temp_form)
-                if temp_form.is_valid():
-                    temp_form.instance.user = self.request.user
-                    self.formlist.append(temp_form)
-                    self.objectlist.append(temp_form.save())
-            return HttpResponseRedirect(self.get_success_url())
-
+            return self.zip_file_handler(request, file)
         else:
             return super().post(self, request, *args, **kwargs)
 
@@ -91,6 +64,54 @@ class NewJobView(LoginRequiredMixin, CreateView, FormMixin):
         form.instance.user = self.request.user
         form.instance.ip = client_ip
         return super().form_valid(form)
+
+    def zip_file_handler(self, request, file):
+        myzip = ZipFile(file.file)
+        if myzip.testzip():  # returns something if the zip is faulty
+            form = JobSubmissionForm(request.POST, request.FILES)
+            form.is_valid()
+            print(vars(form.cleaned_data['sbml_file']))
+            form.add_error('sbml_file', ValidationError('Could not read archive. It may be corrupted or contain '
+                                                        'bad files.'))
+            return self.form_invalid(form)
+
+        filelist = myzip.namelist()
+        any_form_valid = False
+
+        for model in filelist:
+            model_name, ext = os.path.splitext(model)
+            if ext.replace('.', '') not in settings.ALLOWED_EXTENSIONS:
+                continue
+
+            file_size = myzip.getinfo(model).file_size
+            file_dict = MultiValueDict()
+            temp_file_handler = TemporaryFileUploadHandler(request)  # manually instantiate and create a
+            # TempUploadedFile object
+            # see https://docs.djangoproject.com/en/3.0/_modules/django/core/files/uploadhandler/
+
+            with myzip.open(model) as f:
+                temp_file_handler.new_file(field_name='sbml_file', file_name=os.path.basename(f.name),
+                                           content_type='text/xml',
+                                           content_length=file_size, charset=None)  # this class now holds our xml file
+                temp_file_handler.file.write(f.read())  # write the content to the tempuploadFile, which
+                # gets passed to the validators and holds our model file from the zip
+            # temp_file_handler.file.seek(0)
+            temp_file_handler.file_complete(file_size)  # calls file.seek(0) and sets file.size to file_size
+            file_dict['sbml_file'] = temp_file_handler.file
+            # InMemoryUploadedFile(f, 'sbml_file', f.name, 'text/xml', file_size, charset='utf-8')
+            # manually create a form object from each file in zip
+            # file_dict is a MultiValueDict() which holds our file, copying a request.FILES-like object
+            temp_form = JobSubmissionForm(request.POST, file_dict)
+            if temp_form.is_valid():  # if the 'form' is valid, save it as a new Job object, thus queueing it up
+                temp_form.instance.user = self.request.user
+                temp_form.save()
+                any_form_valid = True
+                self.form_list.append(temp_form)
+        myzip.close()
+        return HttpResponseRedirect(self.get_success_url()) if any_form_valid \
+            else self.form_invalid(JobSubmissionForm(
+                request.POST, request.FILES
+            ))
 
 
 class JobOverView(LoginRequiredMixin, SingleTableView, ListView):
