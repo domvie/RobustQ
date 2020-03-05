@@ -161,7 +161,7 @@ def task_failure_handler(sender=None, task_id=None, exception=None, *args, **kwa
     """if a task fails, try to log what happened"""
     task = SubTask.objects.filter(task_id=task_id).get()
     job = Job.objects.filter(id=task.job.id)
-    job.update(status="Failure", is_finished=True)
+    job.update(status="Failed", is_finished=True)
     logger = get_task_logger(task_id)
     logger.error(f'Task {task_id} failed. Exception: {exception}')
     cache.delete('running_job')
