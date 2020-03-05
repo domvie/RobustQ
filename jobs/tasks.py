@@ -25,13 +25,6 @@ from io import StringIO
 
 BASE_DIR = os.getcwd()
 
-# TODO 2 kardinalitäten - pofcalc zb max 15
-# pof result tabelle
-# upload input - choose file oder so
-# bei overview download button
-# zip upload
-# sortier indicator
-
 
 class Capturing(list):
     """Captures stdout of certain functions and saves them in a list"""
@@ -502,6 +495,9 @@ def pofcalc(self, result, job_id, cardinality, *args, **kwargs):
     """The 'main' task - calculates the Failure probability of the given network.
     Calls the PoFcalc executable as a subprocess and once its finished, processes the stdout
     to extract and save the results"""
+
+    # TODO binary changes iself? -> illegal instruction
+
     logger, fpath, path, fname, model_name, extension = setup_process(self, job_id=job_id, result=result, *args,
                                                                       **kwargs)
 

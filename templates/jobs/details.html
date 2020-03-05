@@ -19,7 +19,7 @@
                     <tr class="py-2 pt-3 container">
                         <a href="{% url 'jobs' %}" class="btn btn-sm btn-outline-info">Overview <i
                                 class="fas fa-list"></i></a>
-                        <a onClick="window.location.reload();" class="btn btn-sm btn-outline-secondary"><i
+                        <a onClick="window.location.reload();" class="text text-info btn-sm btn-link"><i
                                 class="fas fa-redo"></i> </a>
 
                         <br>
@@ -146,23 +146,28 @@
                                 <br>
                             {% endif %}
                             {% endif %}
+                            <div class="btn-group">
                             <a href="{% url 'jobs' %}" class="btn btn-sm btn-outline-secondary"><i
                                     class="fas fa-arrow-alt-circle-left"></i> Back</a>
                             <a href="{% url 'new' %}" class="btn btn-sm btn-outline-secondary"><i
                                     class="fas fa-plus-circle"></i> Submit New Job</a>
-                            <a onClick="window.location.reload();" class="btn btn-sm btn-outline-secondary"><i
-                                    class="fas fa-redo"></i> </a>
 
-                            {% if not job.is_finished %}
-                                <a id="cancel_btn" class="btn btn-sm btn-outline-warning float-right ml-1"><i
-                                        class="fas fa-window-close"></i> Cancel</a>
-                            {% else %}
+                            {% if job.is_finished %}
                                 <a href="{% url 'download_job' job.id %}" class="btn btn-sm btn-outline-secondary">Download
                                     logs and files (.zip) <i class="fas fa-download"></i></a>
+                                </div>
                                 <a href="{% url 'job-delete' job.id %}"
                                    class="btn btn-sm btn-outline-danger float-right"><i class="fas fa-trash"></i> Delete
                                 </a>
+
+                            {% else %}
+                                </div>
+                                <a id="cancel_btn" class="btn btn-sm btn-outline-warning float-right ml-1"><i
+                                        class="fas fa-window-close"></i> Cancel</a>
+
                             {% endif %}
+                            <a onClick="window.location.reload();" class="text text-secondary btn btn-sm btn-link"><i
+                                    class="fas fa-redo"></i></a>
                         {% else %}
                             <p>Could not find specified job!</p>
                         {% endif %}

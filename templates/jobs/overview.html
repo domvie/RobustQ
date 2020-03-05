@@ -17,6 +17,9 @@
             <div class="card-body">
                 <div class="py-2 pt-3 container-fluid">
                 <a href="{% url 'new' %}" class="btn btn-sm btn-outline-info">New <i class="fas fa-plus-square"></i></a>
+                    <a onClick="window.location.reload();" class="text text-primary btn btn-sm btn-link"><i
+                                    class="fas fa-redo"></i></a>
+
                     {% if jobs %}
                     <div class="dropdown d-inline-flex float-right">
                       <a class="btn btn-sm border btn-light dropdown-toggle py-1" type="button" id="dropdownMenuButton"
