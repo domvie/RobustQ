@@ -26,7 +26,7 @@ from zipfile import ZipFile
 from django.utils.datastructures import MultiValueDict
 from django.core.files.uploadhandler import TemporaryFileUploadHandler
 from django.core.validators import ValidationError
-
+from django.contrib import messages
 
 class NewJobView(LoginRequiredMixin, CreateView, FormMixin):
     """Class based view for creating a new job (input form)"""
@@ -50,10 +50,13 @@ class NewJobView(LoginRequiredMixin, CreateView, FormMixin):
 
     # Overriding the post method
     def post(self, request, *args, **kwargs):
+        if len(request.FILES.getlist('sbml_file')) > 1:  # did the user upload multiple files?
+            return self.multi_file_upload_handler(request)
+
+        # only a single file was uploaded - check if its a zip archive first
         file = request.FILES['sbml_file']
         # check extension
         filename, ext = os.path.splitext(file.name)
-        print(filename, ext)
         if ext == '.zip':
             return self.zip_file_handler(request, file)
         else:
@@ -66,7 +69,14 @@ class NewJobView(LoginRequiredMixin, CreateView, FormMixin):
         return super().form_valid(form)
 
     def zip_file_handler(self, request, file):
+        """
+        called when the user uploads a zip. Creates a new Job object by calling form.save() for each
+        sbml file in the archive. We create a new 'fake' form for each file so we can run validation on each
+        file separately by calling form.is_valid()
+        """
         myzip = ZipFile(file.file)
+        failed_files = []
+
         if myzip.testzip():  # returns something if the zip is faulty
             form = JobSubmissionForm(request.POST, request.FILES)
             form.is_valid()
@@ -106,8 +116,43 @@ class NewJobView(LoginRequiredMixin, CreateView, FormMixin):
                 temp_form.instance.user = self.request.user
                 temp_form.save()
                 any_form_valid = True
-                self.form_list.append(temp_form)
+            else:
+                failed_files.append(temp_file_handler.file.name)
+
         myzip.close()
+
+        if failed_files:
+            messages.add_message(request, messages.ERROR, f'File(s) {", ".join(failed_files)} failed SBML '
+                                                          f'validation. Try to upload them separately '
+                                                          f'to see detailed error messages.')
+
+        return HttpResponseRedirect(self.get_success_url()) if any_form_valid \
+            else self.form_invalid(JobSubmissionForm(
+                request.POST, request.FILES
+            ))
+
+    def multi_file_upload_handler(self, request):
+        """
+        called when the user uploads multiple file (by selection). Like the zip file handler,
+        this saves a new Job object for each file. We create a new 'fake' form for each file so we can run validation on each
+        file separately by calling form.is_valid()
+        """
+        failed_files = []
+        any_form_valid = False
+        for file in request.FILES.getlist('sbml_file'):
+            file_dict = MultiValueDict()
+            file_dict['sbml_file'] = file
+            temp_form = JobSubmissionForm(request.POST, file_dict)
+            if temp_form.is_valid():  # if the 'form' is valid, save it as a new Job object, thus queueing it up
+                temp_form.instance.user = self.request.user
+                temp_form.save()
+                any_form_valid = True
+            else:
+                failed_files.append(file.name)
+        if failed_files:
+            messages.add_message(request, messages.ERROR, f'File(s) {", ".join(failed_files)} failed SBML '
+                                                          f'validation. Try to upload them separately '
+                                                          f'to see detailed error messages.')
         return HttpResponseRedirect(self.get_success_url()) if any_form_valid \
             else self.form_invalid(JobSubmissionForm(
                 request.POST, request.FILES

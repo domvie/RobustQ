@@ -48,10 +48,7 @@ class Job(models.Model):
     task_id_job = models.CharField(max_length=50, null=True)
     model_name = models.CharField(max_length=50, null=True)
     result_table = models.CharField(max_length=250, null=True)
-    sbml_file = ContentTypeRestrictedFileField(upload_to=user_directory_path, content_types=['text/xml',
-                                                                                             'application/json',
-                                                                                             'text/sbml',
-                                                                                             'application/zip'],
+    sbml_file = ContentTypeRestrictedFileField(upload_to=user_directory_path, content_types=settings.ALLOWED_CONTENT_TYPES,
                                  validators=[FileExtensionValidator(allowed_extensions=settings.ALLOWED_EXTENSIONS,
                                                                     message='Wrong file type!'), sbml_validator],
                                  verbose_name='File', max_upload_size=settings.MAX_UPLOAD_SIZE)

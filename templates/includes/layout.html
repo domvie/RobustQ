@@ -24,9 +24,9 @@
         var sbml_errors;
     </script>
     {% include 'includes/navbar.html' %}
-            {% if messages %}
+        {% if messages %}
             {% for message in messages %}
-                <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+                <div class="container alert alert-{{ message.tags }}">{{ message }}</div>
             {% endfor %}
         {% endif %}
 
@@ -44,6 +44,8 @@
     <script src="{% static 'js/main.js' %}"></script>
 
     <script>
+
+        // File input
         $(document).ready(function () {
             bsCustomFileInput.init();
 
@@ -53,6 +55,7 @@
               $('[data-toggle="popover"]').popover({"trigger": "manual", "html": true})
             });*/
 
+            // sbml error popvers
             if(sbml_errors === true) {
                 var errors = `{{  job_form.sbml_file.errors.as_text }}`;
                 errors = errors.split('* ');

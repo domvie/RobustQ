@@ -31,7 +31,7 @@ SECRET_KEY = 'r)it34y2v5bqdwjgl+ax@&(xk-_tq4w6ra&b&72=$ay2!o@u2k'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['141.244.131.95']
 
 
 # Application definition
@@ -189,6 +189,8 @@ EMAIL_HOST_PASSWORD = DB['EMAILP']
 MEDIA_ROOT = os.path.join(BASE_DIR, 'uploads')
 MEDIA_URL = '/uploads/'
 ALLOWED_EXTENSIONS = ['sbml', 'xml', 'json', 'zip']
+ALLOWED_CONTENT_TYPES = ['text/xml', 'application/json', 'application/zip']
+
 
 from django.contrib.messages import constants as message_constants
 

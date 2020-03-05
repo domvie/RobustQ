@@ -1,14 +1,3 @@
-<script>
-    function submit_this_form() {
-        $('#jobform').submit(function(e) {
-            console.log(e);
-            $('#jobsubmitbtn').hide();
-            $('#pageloader').show();
-        });
-    }
-
-
-</script>
 <div class="container row" id="form_id">
     <div class="col-12">
         <form method="POST" enctype="multipart/form-data" id="jobform">
@@ -21,11 +10,11 @@
                 try to upload the file itself.</small>
                         <div class="input-group">
                           <div class="input-group-prepend">
-                            <span class="input-group-text" id="id_sbml_file_Addon01">Choose model</span>
+                            <span class="input-group-text" id="id_sbml_file_Addon01">Choose model(s)</span>
                           </div>
                           <div class="custom-file">
                               {{ job_form.sbml_file }}
-                            <label class="custom-file-label" for="id_sbml_file">Choose file</label>
+                            <label class="custom-file-label" for="id_sbml_file">Choose files</label>
                           </div>
                         </div>
 
@@ -91,10 +80,19 @@
 
                 <button class="btn btn-outline-info" id="jobsubmitbtn" onclick='submit_this_form()'>Submit</button>
                     <div id="pageloader" style="display: none;" class="row inline-block align-content-center">
-                         <i class="fas fa-spinner fa-spin fa-2x text-info p-1 ml-3"></i><div class="text text-info p-2"> Uploading and validating file, please wait..</div>
+                         <i class="fas fa-spinner fa-spin fa-2x text-info p-1 ml-3"></i><div class="text text-info p-2"> Uploading and validating, please wait..</div>
                     </div>
                 </div>
         </form>
     </div>
 </div>
+
+<script>
+    function submit_this_form() {
+        $('#jobform').submit(function(e) {
+            $('#jobsubmitbtn').hide();
+            $('#pageloader').show();
+        });
+    }
+</script>
 

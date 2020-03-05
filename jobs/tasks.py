@@ -546,7 +546,8 @@ def pofcalc(self, result, job_id, cardinality, *args, **kwargs):
 
     # Start the process
     try:
-        logger.info(f'Starting {self.request.task} with the following arguments: {" ".join(cmd_args)}')
+        if settings.DEBUG:
+            logger.info(f'Starting {self.request.task} with the following arguments: {" ".join(cmd_args)}')
 
         pofcalc_process = subprocess.Popen(cmd_args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         cache.set("running_task_pid", pofcalc_process.pid)
@@ -651,7 +652,6 @@ def execute_pipeline(self, job_id, compression_checked, cardinality_defi,
                    ).on_error(abort_task.s(t_id=self.request.id)).apply_async()
 
     cache.set('current_chain', result.task_id, timeout=40000)
-    logger.info(result.task_id)
 
     copy = result
     parents = list()
@@ -659,7 +659,6 @@ def execute_pipeline(self, job_id, compression_checked, cardinality_defi,
     while copy.parent:
         parents.append(copy.parent)
         copy = copy.parent
-    logger.info(parents)
 
     while not result.ready():  # this blocks the worker from starting another task before the previous one has finished
         for parent in parents:
@@ -673,7 +672,7 @@ def execute_pipeline(self, job_id, compression_checked, cardinality_defi,
         if this_result.is_aborted() or this_result.status == 'REVOKED':
             # if this (execute_pipeline) task has been revoked (by clicking 'cancel'), revoke all tasks in the chain
             # as well to stop them from being executed
-            print(f'Task {self.request.id} was flagged as revoked or got aborted, status {this_result.status}')
+            logger.warning(f'Task {self.request.id} was flagged as revoked or got aborted, status {this_result.status}')
             result.revoke()
             for parent in parents:
                 if parent.status == 'STARTED':

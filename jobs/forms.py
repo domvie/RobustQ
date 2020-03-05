@@ -3,6 +3,7 @@ from .models import Job
 import django_tables2 as tables
 from django.utils import timezone
 import itertools
+from django.conf import settings
 
 
 class JobSubmissionForm(forms.ModelForm):
@@ -16,7 +17,10 @@ class JobSubmissionForm(forms.ModelForm):
         self.fields['sbml_file'].widget.attrs.update({'class': 'custom-file-input',
                                                       'aria-describedby': 'id_sbml_file_Addon01',
                                                       'data-toggle': 'popover',
-                                                      'data-content': ''})
+                                                      'data-content': '',
+                                                      'multiple': True,
+                                                      'accept': '.' + ',.'.join(settings.ALLOWED_EXTENSIONS) + ', ' +
+                                                                ', '.join(settings.ALLOWED_CONTENT_TYPES)})
         self.fields['cardinality_defigueiredo'].widget.attrs.update({'style': 'width: 3.5rem;',
                                                         'min': '1',
                                                         'max': '5',
