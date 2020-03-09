@@ -6,8 +6,12 @@
         <div class="jumbotron p-5">
         {% if user.is_authenticated %}
         <h3>Welcome, {{ user.username }}!</h3>
+            {% if running_jobs %}
         <p>You currently have <a href="{% url 'jobs' %}">{{ running_jobs.count }} jobs</a> running, out of a total of {{ jobs.count }} submitted.</p>
-        {% else %}
+            {% else %}
+                <p>You currently have no running jobs.</p>
+            {% endif %}
+            {% else %}
         <h3>Welcome to RobustQ!</h3>
             <p>RobustQ is a service to quantify cellular robustness. Learn more about it <a href="#" class="link text">here</a>.</p>
         {% endif %}
@@ -16,7 +20,6 @@
 
             {% if user.is_authenticated %}
                 {% load crispy_forms_tags %}
-            <p class="pl-3">Want to queue another job?</p>
             {% include 'includes/new_job_form.html' %}
             {% else %}
 

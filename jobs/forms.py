@@ -2,6 +2,7 @@ from django import forms
 from .models import Job
 import django_tables2 as tables
 from django.utils import timezone
+from django.utils.html import format_html
 import itertools
 from django.conf import settings
 
@@ -82,6 +83,17 @@ class JobTable(tables.Table):
         except:
             return value
 
+    def render_status(self, value):
+        if value is None:
+            return '—'
+        if value == 'Queued':
+            return format_html('<span class="badge badge-info" style="border-radius: 8px;">Queued</div>')
+        elif value == 'Done':
+            return format_html('<span class="badge badge-success" style="border-radius: 8px;">Done</div>')
+        elif value == 'Failed':
+            return format_html('<span class="badge badge-danger" style="border-radius: 8px;">Failure</div>')
+        else:
+            return value
     id = tables.LinkColumn('details', args=[tables.utils.A('pk')], text=lambda record: record.pk)
     details = tables.TemplateColumn(template_name="jobs/tables/details.html", extra_context={'label': 'Details'},
                                     verbose_name='', orderable=False, attrs={"td": {"class": "d-flex justify-content-center"}})

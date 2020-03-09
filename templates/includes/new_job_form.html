@@ -1,3 +1,4 @@
+{% load static %}
 <div class="container row" id="form_id">
     <div class="col-12">
         <form method="POST" enctype="multipart/form-data" id="jobform">
@@ -77,7 +78,6 @@
                       <option value="3">
                       <option value="4">
                     </datalist>
-
                 <button class="btn btn-outline-info" id="jobsubmitbtn" onclick='submit_this_form()'>Submit</button>
                     <div id="pageloader" style="display: none;" class="row inline-block align-content-center">
                          <i class="fas fa-spinner fa-spin fa-2x text-info p-1 ml-3"></i><div class="text text-info p-2"> Uploading and validating, please wait..</div>
@@ -87,12 +87,6 @@
     </div>
 </div>
 
-<script>
-    function submit_this_form() {
-        $('#jobform').submit(function(e) {
-            $('#jobsubmitbtn').hide();
-            $('#pageloader').show();
-        });
-    }
+<script src="{% static 'js/file_upload.js' %}">
 </script>
 

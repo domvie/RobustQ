@@ -27,6 +27,18 @@ from django.utils.datastructures import MultiValueDict
 from django.core.files.uploadhandler import TemporaryFileUploadHandler
 from django.core.validators import ValidationError
 from django.contrib import messages
+from django.http import StreamingHttpResponse
+import time
+
+
+def uploadstream(request, user):
+    def event_stream():
+        while True:
+            progress = cache.get('current_upload')
+            time.sleep(1)
+            yield f'data: {progress} from {request.user.username}\n\n'
+    return StreamingHttpResponse(event_stream(), content_type='text/event-stream')
+
 
 class NewJobView(LoginRequiredMixin, CreateView, FormMixin):
     """Class based view for creating a new job (input form)"""
@@ -51,6 +63,7 @@ class NewJobView(LoginRequiredMixin, CreateView, FormMixin):
     # Overriding the post method
     def post(self, request, *args, **kwargs):
         if len(request.FILES.getlist('sbml_file')) > 1:  # did the user upload multiple files?
+            cache.set('current_upload', len(request.FILES.getlist('sbml_file')), timeout=180)
             return self.multi_file_upload_handler(request)
 
         # only a single file was uploaded - check if its a zip archive first
@@ -139,7 +152,12 @@ class NewJobView(LoginRequiredMixin, CreateView, FormMixin):
         """
         failed_files = []
         any_form_valid = False
+        total_files = len(request.FILES.getlist('sbml_file'))
+
         for file in request.FILES.getlist('sbml_file'):
+            _, ext = os.path.splitext(file.name)
+            if ext == '.zip':
+                self.zip_file_handler(request, file)
             file_dict = MultiValueDict()
             file_dict['sbml_file'] = file
             temp_form = JobSubmissionForm(request.POST, file_dict)
@@ -149,6 +167,7 @@ class NewJobView(LoginRequiredMixin, CreateView, FormMixin):
                 any_form_valid = True
             else:
                 failed_files.append(file.name)
+
         if failed_files:
             messages.add_message(request, messages.ERROR, f'File(s) {", ".join(failed_files)} failed SBML '
                                                           f'validation. Try to upload them separately '

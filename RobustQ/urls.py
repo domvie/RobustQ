@@ -36,7 +36,7 @@ urlpatterns = [
     path('jobs/download_results/<str:type>', job_views.download_results, name='download_results'),
     path('jobs/download_job/<int:pk>', job_views.download_job, name='download_job'),
     path('jobs/result_table/<int:pk>/<str:type>', job_views.result_table, name='result_table'),
-
+    path('uploadstream/<str:user>', job_views.uploadstream, name="uploadstream"),
 ]
 
 if settings.DEBUG:
