@@ -171,6 +171,10 @@ STATICFILES_DIRS = [
 #     integrations=[DjangoIntegration()]
 # )
 
+FILE_UPLOAD_HANDLERS = ["jobs.uploadhandler.ProgressBarUploadHandler",
+                        "django.core.files.uploadhandler.MemoryFileUploadHandler",
+                        "django.core.files.uploadhandler.TemporaryFileUploadHandler"]
+
 CRISPY_TEMPLATE_PACK = 'bootstrap4'
 DJANGO_TABLES2_TEMPLATE = 'django_tables2/bootstrap4.html'
 

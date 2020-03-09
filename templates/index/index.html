@@ -9,7 +9,7 @@
             {% if running_jobs %}
         <p>You currently have <a href="{% url 'jobs' %}">{{ running_jobs.count }} jobs</a> running, out of a total of {{ jobs.count }} submitted.</p>
             {% else %}
-                <p>You currently have no running jobs.</p>
+                <p>You currently have <a href="{% url 'jobs' %}">no running jobs.</a></p>
             {% endif %}
             {% else %}
         <h3>Welcome to RobustQ!</h3>

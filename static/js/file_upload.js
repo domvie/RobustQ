@@ -1,15 +1,93 @@
-function submit_this_form() {
-    var eventSource = new EventSource("/uploadstream/test");
-    eventSource.onmessage = function(event) {
-        console.log(event.data)
-    };
+// function submit_this_form() {
+//     var eventSource = new EventSource("/uploadstream/test");
+//     eventSource.onmessage = function(event) {
+//         console.log(event.data)
+//     };
+//
+//     $('#jobform').submit(function(e) {
+//         $('#jobsubmitbtn').hide();
+//         $('#pageloader').show();
+//
+//     });
+// }
 
-    $('#jobform').submit(function(e) {
+// Generate 32 char random uuid
+function gen_uuid() {
+    var uuid = ""
+    for (var i=0; i < 32; i++) {
+        uuid += Math.floor(Math.random() * 16).toString(16);
+    }
+    return uuid
+}
+
+// Add upload progress for multipart forms.
+$(function() {
+    $('#jobform').submit(function(){
+        // Prevent multiple submits
+        if ($.data(this, 'submitted')) return false;
+
+        var freq = 2000; // freqency of update in ms
+        var uuid = gen_uuid(); // id for this upload so we can fetch progress info.
+        var progress_url = '/upload_progress/'; // ajax view serving progress info
+        var progressbar = $('#progressbar');
+        var progress_container = $('#progressbar_container');
+
         $('#jobsubmitbtn').hide();
         $('#pageloader').show();
+        progress_container.show();
 
+        // Append X-Progress-ID uuid form action
+        this.action += (this.action.indexOf('?') === -1 ? '?' : '&') + 'X-Progress-ID=' + uuid;
+
+
+        // Update progress bar
+        function update_progress_info() {
+            function reqListener () {
+              var data = JSON.parse(this.responseText);
+              if (data === null) {
+                  progress_req.abort();
+                  return
+              }
+              console.log(data);
+              progressbar.html(data.status+'..');
+              if (data.status === 'Uploading') {
+                  var progress = parseInt(data.received) / parseInt(data.size);
+                  progressbar.width(progress*50+'%');
+              }
+              else if (data.status === 'Validating') {
+                  var progress = parseInt(data.done) / parseInt(data.total);
+                  progressbar.width((50+progress*50)+'%');
+              }
+            }
+
+            // $.getJSON(progress_url, {'X-Progress-ID': uuid}, function(data, status){
+            //     if (data) {
+            //         console.log(data);
+            //         var progress = parseInt(data.uploaded) / parseInt(data.length);
+            //         var width = $progress.find('.progress-container').width();
+            //         var progress_width = width * progress;
+            //         $progress.find('.progress-bar').width(progress_width);
+            //         $progress.find('.progress-info').text('uploading ' + parseInt(progress*100) + '%');
+            //     }
+            //     window.setTimeout(update_progress_info, freq);
+            // });
+            var progress_req = new XMLHttpRequest();
+            progress_req.addEventListener("load", reqListener);
+            progress_req.upload.addEventListener("load", reqListener);
+            progress_req.onerror = () =>  {
+                console.log('There was an error: ');
+                progress_req.abort();
+            };
+
+            progress_req.open("GET", progress_url+uuid);
+            progress_req.send();
+            window.setTimeout(update_progress_info, freq);
+        }
+        window.setTimeout(update_progress_info, freq);
+
+        $.data(this, 'submitted', true); // mark form as submitted.
     });
-}
+});
 
 //     (function($){
 //         $(function(){

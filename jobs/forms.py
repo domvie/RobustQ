@@ -91,7 +91,11 @@ class JobTable(tables.Table):
         elif value == 'Done':
             return format_html('<span class="badge badge-success" style="border-radius: 8px;">Done</div>')
         elif value == 'Failed':
-            return format_html('<span class="badge badge-danger" style="border-radius: 8px;">Failure</div>')
+            return format_html('<span class="badge badge-danger" style="border-radius: 8px;">Failed</div>')
+        elif value == 'Cancelled':
+            return format_html('<span class="badge badge-warning" style="border-radius: 8px;">Cancelled</div>')
+        elif value == 'Started':
+            return format_html('<span class="badge badge-primary" style="border-radius: 8px;">Started</div>')
         else:
             return value
     id = tables.LinkColumn('details', args=[tables.utils.A('pk')], text=lambda record: record.pk)

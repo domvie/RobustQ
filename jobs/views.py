@@ -8,7 +8,8 @@ from django.views.generic.edit import FormMixin
 from .models import Job
 from ipware import get_client_ip
 from django.forms.models import model_to_dict
-from django.http import HttpResponse, HttpResponseForbidden, JsonResponse, FileResponse, HttpResponseRedirect
+from django.http import HttpResponse, HttpResponseForbidden, JsonResponse, FileResponse, HttpResponseRedirect, \
+    HttpResponseServerError
 from django_celery_results.models import TaskResult
 from celery.result import AsyncResult
 from django_tables2.views import SingleTableView
@@ -29,6 +30,8 @@ from django.core.validators import ValidationError
 from django.contrib import messages
 from django.http import StreamingHttpResponse
 import time
+from jobs.uploadhandler import get_progress_id
+from .tasks import revoke_job
 
 
 def uploadstream(request, user):
@@ -40,6 +43,22 @@ def uploadstream(request, user):
     return StreamingHttpResponse(event_stream(), content_type='text/event-stream')
 
 
+# view that display the current upload progress (json)
+def upload_progress(request, uuid):
+    """
+    Return JSON object with information about the progress of an upload.
+    """
+    if uuid:
+        progress_id = uuid
+    else:
+        progress_id = get_progress_id(request)
+    if progress_id:
+        data = cache.get(progress_id, None)
+        return JsonResponse(data, safe=False)
+    else:
+        return HttpResponseServerError('Server Error: You must provide X-Progress-ID header or query param.')
+
+
 class NewJobView(LoginRequiredMixin, CreateView, FormMixin):
     """Class based view for creating a new job (input form)"""
     model = Job
@@ -49,6 +68,7 @@ class NewJobView(LoginRequiredMixin, CreateView, FormMixin):
     success_url = reverse_lazy('jobs')
     form_list = []
     object = None
+    progress_id = None
 
     def get_success_url(self):
         return '/jobs/'
@@ -62,12 +82,13 @@ class NewJobView(LoginRequiredMixin, CreateView, FormMixin):
 
     # Overriding the post method
     def post(self, request, *args, **kwargs):
+        file = request.FILES['sbml_file']
+        self.progress_id = file.progress_id
         if len(request.FILES.getlist('sbml_file')) > 1:  # did the user upload multiple files?
             cache.set('current_upload', len(request.FILES.getlist('sbml_file')), timeout=180)
             return self.multi_file_upload_handler(request)
 
         # only a single file was uploaded - check if its a zip archive first
-        file = request.FILES['sbml_file']
         # check extension
         filename, ext = os.path.splitext(file.name)
         if ext == '.zip':
@@ -100,6 +121,7 @@ class NewJobView(LoginRequiredMixin, CreateView, FormMixin):
 
         filelist = myzip.namelist()
         any_form_valid = False
+        self.update_cache(zip_total=len(filelist))
 
         for model in filelist:
             model_name, ext = os.path.splitext(model)
@@ -131,7 +153,7 @@ class NewJobView(LoginRequiredMixin, CreateView, FormMixin):
                 any_form_valid = True
             else:
                 failed_files.append(temp_file_handler.file.name)
-
+            self.update_cache()
         myzip.close()
 
         if failed_files:
@@ -153,6 +175,7 @@ class NewJobView(LoginRequiredMixin, CreateView, FormMixin):
         failed_files = []
         any_form_valid = False
         total_files = len(request.FILES.getlist('sbml_file'))
+        self.update_cache(total=total_files)
 
         for file in request.FILES.getlist('sbml_file'):
             _, ext = os.path.splitext(file.name)
@@ -167,6 +190,7 @@ class NewJobView(LoginRequiredMixin, CreateView, FormMixin):
                 any_form_valid = True
             else:
                 failed_files.append(file.name)
+            self.update_cache()
 
         if failed_files:
             messages.add_message(request, messages.ERROR, f'File(s) {", ".join(failed_files)} failed SBML '
@@ -176,6 +200,17 @@ class NewJobView(LoginRequiredMixin, CreateView, FormMixin):
             else self.form_invalid(JobSubmissionForm(
                 request.POST, request.FILES
             ))
+
+    def update_cache(self, **kwargs):
+        """ essentially adds +1 to total done count / updates cache with kwargs"""
+        uuid = self.progress_id
+        data = cache.get(uuid, {})
+        data['status'] = 'Validating'
+        data['total'] += kwargs.pop('total', 0)
+        zip_total = kwargs.pop('zip_total', 0)
+        data['total'] += zip_total
+        data['done'] += 1
+        cache.set(uuid, data)
 
 
 class JobOverView(LoginRequiredMixin, SingleTableView, ListView):
@@ -303,41 +338,18 @@ def cancel_job(request, pk):
         return redirect('index-home')
 
     try:
-        task_id_job = job.task_id_job
-        result = AbortableAsyncResult(task_id_job)
-        # terminate the running and all subsequent tasks
-        # calling abort() and/or revoke() on this result will result in a cascade of revokes of uncompleted tasks
-        # as in the execute_pipeline() task all chain tasks get called .revoke() on them
-        print(f'REVOKING JOB {task_id_job}')
-        result.abort()
-        result.revoke(terminate=True)
-        if job.status != 'Cancelled':  # should be set to cancelled in task_revoked_handler (signals)
-            job = Job.objects.filter(id=pk)
-            job.update(status="Cancelled", is_finished=True)
+        revoke_job(job)
+    except:
+        return HttpResponse('Failed to cancel job')
 
-        # Get the currently running task/job set by the task_prerun_handler (signals.py)
-        current_task = cache.get('current_task')
-        current_job = cache.get('current_job')  # more reliable than 'running_job'
-        # as running_job is only set by exec_pipline task
 
-        if current_job == pk:  # make sure we dont kill the running task from the wrong view
-            # kill the process with the pid - this is only applicable for subprocesses spawned by the worker with Popen
-            pid = cache.get("running_task_pid")
-            if pid is not None:
-                try:
-                    os.kill(pid, 0) # check if it is still running - fails pretty much for all non-subprocess tasks
-                except OSError:
-                    pass
-                else:
-                    try:
-                        os.kill(pid, signal.SIGKILL)  # if it is running, kill it
-                    except ProcessLookupError:
-                        pass
-
-    except KeyError:
-        return JsonResponse({'not found': True})
-
-    return JsonResponse({'0': 0})
+@login_required
+def cancel_all_jobs(request):
+    jobs_to_cancel = Job.objects.filter(user=request.user, is_finished=False)
+    if jobs_to_cancel:
+        for job in jobs_to_cancel:
+            revoke_job(job)
+    return redirect('jobs')
 
 
 @login_required

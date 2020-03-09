@@ -21,7 +21,7 @@ from .custom_wraps import revoke_chain_authority, RevokeChainRequested
 from django.conf import settings
 from django.core.mail import send_mail
 from io import StringIO
-
+import signal
 
 BASE_DIR = os.getcwd()
 
@@ -37,6 +37,40 @@ class Capturing(list):
         self.extend(self._stringio.getvalue())
         del self._stringio    # free up some memory
         sys.stdout = self._stdout
+
+
+def revoke_job(job):
+    task_id_job = job.task_id_job
+    result = AbortableAsyncResult(task_id_job)
+    # terminate the running and all subsequent tasks
+    # calling abort() and/or revoke() on this result will result in a cascade of revokes of uncompleted tasks
+    # as in the execute_pipeline() task all chain tasks get called .revoke() on them
+    print(f'REVOKING JOB {task_id_job}')
+    result.revoke()
+    result.abort()
+    result.revoke(terminate=True)
+    if job.status != 'Cancelled':  # should be set to cancelled in task_revoked_handler (signals)
+        #  does not work e.g. when celery is not running
+        Job.objects.filter(id=job.id).update(status="Cancelled", is_finished=True)
+
+    # Get the currently running task/job set by the task_prerun_handler (signals.py)
+    # current_task = cache.get('current_task')
+    current_job = cache.get('current_job')  # more reliable than 'running_job'
+    # as running_job is only set by exec_pipline task
+
+    if current_job == job.id:  # make sure we dont kill the running task from the wrong view
+        # kill the process with the pid - this is only applicable for subprocesses spawned by the worker with Popen
+        pid = cache.get("running_task_pid")
+        if pid is not None:
+            try:
+                os.kill(pid, 0) # check if it is still running - fails pretty much for all non-subprocess tasks
+            except OSError:
+                pass
+            else:
+                try:
+                    os.kill(pid, signal.SIGKILL)  # if it is running, kill it
+                except ProcessLookupError:
+                    pass
 
 
 def log_subprocess_output(pipe, logger=None):
@@ -627,8 +661,10 @@ def execute_pipeline(self, job_id, compression_checked, cardinality_defi,
 
     """
     this_result = AbortableAsyncResult(self.request.id)
-    if this_result.is_aborted() or this_result.status == 'REVOKED':
-        return 'REVOKED'
+    job = Job.objects.get(id=job_id)
+    if this_result.is_aborted() or this_result.status == 'REVOKED' or job.status == 'Cancelled' \
+            or this_result.status == 'ABORTED':
+        return 'ABORTED'
 
     cache.set('running_job', job_id, timeout=10000)
     logger, fpath, path, fname, model_name, extension = setup_process(self, job_id=job_id, result=None, *args,
@@ -665,7 +701,7 @@ def execute_pipeline(self, job_id, compression_checked, cardinality_defi,
                     name = None
                 logger.error(f'Task {parent.id}, {name} ended with status {parent.status}!')
                 return result.task_id
-        if this_result.is_aborted() or this_result.status == 'REVOKED':
+        if this_result.is_aborted() or this_result.status == 'REVOKED' or job.status == 'Cancelled':
             # if this (execute_pipeline) task has been revoked (by clicking 'cancel'), revoke all tasks in the chain
             # as well to stop them from being executed
             logger.warning(f'Task {self.request.id} was flagged as revoked or got aborted, status {this_result.status}')
@@ -675,6 +711,7 @@ def execute_pipeline(self, job_id, compression_checked, cardinality_defi,
                     parent.revoke(terminate=True)
                 if parent.status == 'PENDING':
                     parent.revoke()
+            revoke_job(job)
             break
 
         time.sleep(1)

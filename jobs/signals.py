@@ -1,7 +1,7 @@
-from django.db.models.signals import post_save, post_delete
+from django.db.models.signals import post_save, pre_delete
 from django.dispatch import receiver
 from jobs.models import Job, SubTask
-from .tasks import execute_pipeline
+from .tasks import execute_pipeline, revoke_job
 from django_celery_results.models import TaskResult
 from celery.signals import task_postrun, after_task_publish, task_prerun, task_failure, celeryd_init, task_revoked
 import os
@@ -12,6 +12,8 @@ import datetime
 import sys
 from django.core.cache import cache
 from django.conf import settings
+from celery.result import AsyncResult
+from django.utils import timezone
 
 """All signals connected to task execution are handled here, including celery worker signals
 """
@@ -77,8 +79,15 @@ def task_prerun_handler(sender=None, task_id=None, task=None, *args, **kwargs):
 
     job_qs = Job.objects.filter(id=job_id)
     job = job_qs.get()
-    if job.status is not "Done":
-        job_qs.update(status="Started")
+
+    #  check if aborted
+    res = AsyncResult(task_id)
+    if res.status == 'REVOKED' or res.status == 'ABORTED':
+        return
+    if job.status is not "Done" or job.status != 'Cancelled':
+        job_qs.update(status="Started", is_finished=False)
+    else:
+        return
 
     fpath = job.sbml_file.path
     path = os.path.dirname(fpath)
@@ -161,7 +170,17 @@ def task_failure_handler(sender=None, task_id=None, exception=None, *args, **kwa
     """if a task fails, try to log what happened"""
     task = SubTask.objects.filter(task_id=task_id).get()
     job = Job.objects.filter(id=task.job.id)
-    job.update(status="Failed", is_finished=True)
+
+    finished_date = timezone.now()
+    duration = finished_date - job.get().start_date
+    hours, remainder = divmod(duration.total_seconds(), 3600)
+    minutes, seconds = divmod(remainder, 60)
+    duration = '{:02}:{:02}:{:02}'.format(int(hours), int(minutes), int(seconds))
+    job.update(is_finished=True, duration=duration, finished_date=finished_date)
+
+    if job.get().status != 'Cancelled':
+        job.update(status="Failed")
+
     logger = get_task_logger(task_id)
     logger.error(f'Task {task_id} failed. Exception: {exception}')
     cache.delete('running_job')
@@ -177,8 +196,10 @@ def worker_init(sender, instance, conf, options, **kwargs):
 def task_revoked_handler(request, terminated, signum, expired, *args, **kwargs):
     """fires when a task is revoked - i.e. when user it manually or the execution chain fails"""
     job_id = kwargs['job_id']
+    print('Task revoke handler: cancelling job ', job_id)
     job = Job.objects.filter(id=job_id)
     job.update(status="Cancelled", is_finished=True)
+    AsyncResult(request.id).revoke()
     logger = get_task_logger(request.id)
     logger.warning(f'Task {request.task} for job {job_id} has been flagged as revoked, with terminate={terminated}, '
                    f'signal {signum}, expired: {expired}')
@@ -197,3 +218,9 @@ def task_sent_handler(sender=None, headers=None, body=None, **kwargs):
 
     except Exception as e:
         print(repr(e))
+
+
+@receiver(pre_delete, sender=Job)
+def pre_delete_handler(sender, instance, using, *args, **kwargs):
+    #  make sure we cancel any celery jobs before deleting
+    revoke_job(instance)

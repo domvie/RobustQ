@@ -2,7 +2,7 @@
 <a href="{% url 'download_job' record.pk %}" class="text text-secondary btn btn-sm btn-link"
    data-toggle="tooltip" title="Download"><i class="fas fa-download"></i></a>
 {% if not record.is_finished %}
-    <a id="cancel_btn" class="text text-warning btn btn-sm btn-link"><i
+    <a id="cancel_btn" class="text text-warning btn btn-sm btn-link" href="javascript:cancelJob({{ record.pk }})"><i
             class="fas fa-window-close" data-toggle="tooltip" title="Cancel"></i></a>
 
 {% else %}
