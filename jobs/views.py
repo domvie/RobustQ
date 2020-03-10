@@ -32,6 +32,7 @@ from django.http import StreamingHttpResponse
 import time
 from jobs.uploadhandler import get_progress_id
 from .tasks import revoke_job
+from RobustQ.celery import app
 
 
 def uploadstream(request, user):
@@ -231,24 +232,6 @@ class JobOverView(LoginRequiredMixin, SingleTableView, ListView):
         context['running_jobs'] = jobs.filter(is_finished='False')
         context['jobs'] = jobs
 
-        # # Get number of queued jobs # TODO this is currently slow and not worth it
-        # # first, get the number in the message broker queue
-        # try:
-        #     with app.connection_or_acquire() as conn:
-        #         context['jobs_queued'] = conn.default_channel.queue_declare(
-        #             queue='jobs', passive=True).message_count
-        # except:
-        #     context['jobs_queued'] = 0
-        # try: # then get the tasks that have been sent to the worker but have not been executed yet
-        #     reserved_tasks = app.control.inspect().reserved()
-        #     nr_jobs_sent_to_worker = len(list(reserved_tasks.values())[0])
-        # except AttributeError:  # when value is None (celery not running e.g.)
-        #     nr_jobs_sent_to_worker = 0
-        # if context['jobs_queued']:
-        #     context['jobs_queued'] += nr_jobs_sent_to_worker
-        # elif nr_jobs_sent_to_worker != 0:
-        #     context['jobs_queued'] = nr_jobs_sent_to_worker
-
         return context
 
 
@@ -431,3 +414,27 @@ def result_table(request, pk, type):
 
             pd.read_csv(filename).to_csv(path_or_buf=response, sep=';', index=False, decimal=".")
             return response
+
+
+@login_required
+def get_queue(request):
+    pass # TODO very ureliable
+    # Get number of queued jobs
+    # first, get the number in the message broker queue
+    try:
+        with app.connection_or_acquire() as conn:
+            jobs_queued = conn.default_channel.queue_declare(
+                queue='jobs', passive=True).message_count
+    except:
+        jobs_queued = 0
+    try: # then get the tasks that have been sent to the worker but have not been executed yet
+        reserved_tasks = app.control.inspect().reserved()
+        nr_jobs_sent_to_worker = len(list(reserved_tasks.values())[0])
+    except AttributeError:  # when value is None (celery not running e.g.)
+        nr_jobs_sent_to_worker = 0
+    if jobs_queued:
+        jobs_queued += nr_jobs_sent_to_worker
+    elif nr_jobs_sent_to_worker:
+        jobs_queued = nr_jobs_sent_to_worker
+
+    return JsonResponse({'queue': jobs_queued})

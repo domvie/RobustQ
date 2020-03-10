@@ -63,7 +63,7 @@ def revoke_job(job):
         pid = cache.get("running_task_pid")
         if pid is not None:
             try:
-                os.kill(pid, 0) # check if it is still running - fails pretty much for all non-subprocess tasks
+                os.kill(pid, 0)  # check if it is still running - fails pretty much for all non-subprocess tasks
             except OSError:
                 pass
             else:
@@ -708,7 +708,8 @@ def execute_pipeline(self, job_id, compression_checked, cardinality_defi,
             result.revoke()
             for parent in parents:
                 if parent.status == 'STARTED':
-                    parent.revoke(terminate=True)
+                    parent.revoke(terminate=True, signal=signal.SIGTERM)
+                    AbortableAsyncResult(parent.id).abort()
                 if parent.status == 'PENDING':
                     parent.revoke()
             revoke_job(job)

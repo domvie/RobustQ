@@ -21,6 +21,9 @@
                                     class="fas fa-redo"></i></a>
 
                     {% if jobs %}
+                        <button class="btn btn-sm btn-outline-secondary" id="getqueue"
+                        data-toggle="popover" title=""
+                                data-content="">Poll queue</button>
                     <div class="dropdown d-inline-flex float-right">
                       <a class="btn btn-sm border btn-light dropdown-toggle" type="button" id="dropdownMenuButton"
                               data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
@@ -66,9 +69,6 @@
                         <figure>
                         <figcaption class="figure-caption pt-2">
                             Total: {{ jobs.count }}
-                            {% if jobs_queued %}
-                                - {{ jobs_queued }} in queue.
-                            {% endif %}
                         </figcaption>
                     {% render_table table %}
                         </figure>

@@ -38,7 +38,8 @@ urlpatterns = [
     path('jobs/result_table/<int:pk>/<str:type>', job_views.result_table, name='result_table'),
     path('uploadstream/<str:user>', job_views.uploadstream, name="uploadstream"),
     path('upload_progress/<str:uuid>', job_views.upload_progress, name="upload_progress"),
-    path('cancel_jobs', job_views.cancel_all_jobs, name="cancel_all_jobs")
+    path('cancel_jobs/', job_views.cancel_all_jobs, name="cancel_all_jobs"),
+    path('queue/', job_views.get_queue, name="queue")
 ]
 
 if settings.DEBUG:

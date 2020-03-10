@@ -48,14 +48,14 @@ $(function() {
                   progress_req.abort();
                   return
               }
-              console.log(data);
+              var progress;
               progressbar.html(data.status+'..');
               if (data.status === 'Uploading') {
-                  var progress = parseInt(data.received) / parseInt(data.size);
+                    progress = parseInt(data.received) / parseInt(data.size);
                   progressbar.width(progress*50+'%');
               }
               else if (data.status === 'Validating') {
-                  var progress = parseInt(data.done) / parseInt(data.total);
+                  progress = parseInt(data.done) / parseInt(data.total);
                   progressbar.width((50+progress*50)+'%');
               }
             }
