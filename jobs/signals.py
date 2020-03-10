@@ -170,6 +170,8 @@ def task_failure_handler(sender=None, task_id=None, exception=None, *args, **kwa
     """if a task fails, try to log what happened"""
     task = SubTask.objects.filter(task_id=task_id).get()
     job = Job.objects.filter(id=task.job.id)
+    if job.get().status != 'Cancelled':
+        job.update(status="Failed")
 
     finished_date = timezone.now()
     duration = finished_date - job.get().start_date
@@ -177,9 +179,6 @@ def task_failure_handler(sender=None, task_id=None, exception=None, *args, **kwa
     minutes, seconds = divmod(remainder, 60)
     duration = '{:02}:{:02}:{:02}'.format(int(hours), int(minutes), int(seconds))
     job.update(is_finished=True, duration=duration, finished_date=finished_date)
-
-    if job.get().status != 'Cancelled':
-        job.update(status="Failed")
 
     logger = get_task_logger(task_id)
     logger.error(f'Task {task_id} failed. Exception: {exception}')

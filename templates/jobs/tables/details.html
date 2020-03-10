@@ -1,4 +1,4 @@
-<a href="{% url 'details' record.pk %}" class="btn btn-sm btn-outline-info">{{ label }}</a>
+<a href="{% url 'details' record.pk %}" class="btn btn-sm btn-link text text-info"><i class="fas fa-info-circle fa-lg"></i></a>
 <a href="{% url 'download_job' record.pk %}" class="text text-secondary btn btn-sm btn-link"
    data-toggle="tooltip" title="Download"><i class="fas fa-download"></i></a>
 {% if not record.is_finished %}
