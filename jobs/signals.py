@@ -14,6 +14,8 @@ from django.core.cache import cache
 from django.conf import settings
 from celery.result import AsyncResult
 from django.utils import timezone
+from celery.contrib.abortable import AbortableAsyncResult
+
 
 """All signals connected to task execution are handled here, including celery worker signals
 """
@@ -47,8 +49,7 @@ def start_job(sender, instance, created, **kwargs):
 
 
 #  these tasks are ignored by the signal handlers
-excluded_tasks = ['jobs.tasks.cleanup_expired_results', 'update_db', 'result_email', 'release_lock',
-                  'abort_task']
+excluded_tasks = ['jobs.tasks.cleanup_expired_results', 'update_db', 'result_email', 'abort_task']
 
 
 @receiver(post_save, sender=TaskResult)
@@ -84,7 +85,7 @@ def task_prerun_handler(sender=None, task_id=None, task=None, *args, **kwargs):
     res = AsyncResult(task_id)
     if res.status == 'REVOKED' or res.status == 'ABORTED':
         return
-    if job.status is not "Done" or job.status != 'Cancelled':
+    if job.status is not "Done" and job.status != 'Cancelled':
         job_qs.update(status="Started", is_finished=False)
     else:
         return
@@ -182,6 +183,7 @@ def task_failure_handler(sender=None, task_id=None, exception=None, *args, **kwa
 
     logger = get_task_logger(task_id)
     logger.error(f'Task {task_id} failed. Exception: {exception}')
+
     cache.delete('running_job')
 
 
@@ -198,7 +200,7 @@ def task_revoked_handler(request, terminated, signum, expired, *args, **kwargs):
     print('Task revoke handler: cancelling job ', job_id)
     job = Job.objects.filter(id=job_id)
     job.update(status="Cancelled", is_finished=True)
-    AsyncResult(request.id).revoke()
+    SubTask.objects.filter(task_id=request.id).update(status="Terminated")
     logger = get_task_logger(request.id)
     logger.warning(f'Task {request.task} for job {job_id} has been flagged as revoked, with terminate={terminated}, '
                    f'signal {signum}, expired: {expired}')

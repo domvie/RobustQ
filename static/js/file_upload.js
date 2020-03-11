@@ -22,10 +22,12 @@ function gen_uuid() {
 
 // Add upload progress for multipart forms.
 $(function() {
+
     $('#jobform').submit(function(){
         // Prevent multiple submits
         if ($.data(this, 'submitted')) return false;
 
+        var nr_files = $('#id_sbml_file')[0].files.length;
         var freq = 2000; // freqency of update in ms
         var uuid = gen_uuid(); // id for this upload so we can fetch progress info.
         var progress_url = '/upload_progress/'; // ajax view serving progress info
@@ -52,7 +54,9 @@ $(function() {
               progressbar.html(data.status+'..');
               if (data.status === 'Uploading') {
                     progress = parseInt(data.received) / parseInt(data.size);
-                  progressbar.width(progress*50+'%');
+                    var percent = 50;
+                    if (nr_files === 1) percent = 100;
+                  progressbar.width(progress*percent+'%');
               }
               else if (data.status === 'Validating') {
                   progress = parseInt(data.done) / parseInt(data.total);

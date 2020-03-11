@@ -22,6 +22,10 @@ from django.conf import settings
 from django.core.mail import send_mail
 from io import StringIO
 import signal
+from celery.exceptions import SoftTimeLimitExceeded
+from celery.contrib import rdb
+import pandas as pd
+
 
 BASE_DIR = os.getcwd()
 
@@ -40,15 +44,18 @@ class Capturing(list):
 
 
 def revoke_job(job):
+    # terminate the running and all subsequent tasks of the job
     task_id_job = job.task_id_job
     result = AbortableAsyncResult(task_id_job)
-    # terminate the running and all subsequent tasks
     # calling abort() and/or revoke() on this result will result in a cascade of revokes of uncompleted tasks
     # as in the execute_pipeline() task all chain tasks get called .revoke() on them
-    print(f'REVOKING JOB {task_id_job}')
     result.revoke()
     result.abort()
-    result.revoke(terminate=True)
+    logger = get_task_logger(task_id_job)
+    print(f'REVOKING JOB {task_id_job}')
+    logger.warning("Revoking from within REVOKE_JOB")
+    job.refresh_from_db()
+    # result.revoke(terminate=True)
     if job.status != 'Cancelled':  # should be set to cancelled in task_revoked_handler (signals)
         #  does not work e.g. when celery is not running
         Job.objects.filter(id=job.id).update(status="Cancelled", is_finished=True)
@@ -57,30 +64,59 @@ def revoke_job(job):
     # current_task = cache.get('current_task')
     current_job = cache.get('current_job')  # more reliable than 'running_job'
     # as running_job is only set by exec_pipline task
-
+    pid = cache.get("running_task_pid")
     if current_job == job.id:  # make sure we dont kill the running task from the wrong view
         # kill the process with the pid - this is only applicable for subprocesses spawned by the worker with Popen
-        pid = cache.get("running_task_pid")
+        print(f"Attempting to close process from revoke_job. pid={pid}, job={job.id}")
         if pid is not None:
             try:
-                os.kill(pid, 0)  # check if it is still running - fails pretty much for all non-subprocess tasks
-            except OSError:
+                os.kill(pid, signal.SIGKILL)  # if it is running, kill it
+                print('Successfully killed process')
+            except ProcessLookupError:
                 pass
-            else:
-                try:
-                    os.kill(pid, signal.SIGKILL)  # if it is running, kill it
-                except ProcessLookupError:
-                    pass
+    pipe_dict = cache.get(f'pipeline_{job.id}')
+    if pipe_dict:
+        try:
+            if pid == pipe_dict['pid']:
+                return
+            logger.warning("trying with pipe dict")
+            logger.warning(repr(pipe_dict))
+            logger.warning(f'PID IS DIFFERENT: {pid}, {pipe_dict["pid"]}')
+            os.kill(pipe_dict['pid'], signal.SIGTERM)
+        except:
+            pass
+        pipe_id = pipe_dict.pop('pipeline_id')
+        if pipe_id:
+            logger.warning("abortion state end of revoke job:")
+            logger.warning(AbortableAsyncResult(pipe_id).is_aborted())
 
 
-def log_subprocess_output(pipe, logger=None):
+def update_meta_info(self, job_id, pid):
+    # update meta info
+    cache.set("running_task_pid", pid)
+    pipe_dict = cache.get(f"pipeline_{job_id}", {})
+    pipe_dict.update({
+        'pid': pid,
+        'job_id': job_id,
+        'task_id': self.request.id,
+        'name': self.request.task
+    })
+    cache.set(f"pipeline_{job_id}", pipe_dict)
+    self.update_state(state='STARTED', meta={'pid_subprocess': pid})
+
+
+def log_subprocess_output(pipe, logger=None, **kwargs):
     """logs stdout from a subprocess pipe to the individual task logger"""
     formatter_new = logging.Formatter('[%(asctime)s] %(message)s')
+    self = kwargs.pop('self', 0)
     # change logger format temporarily while reading stdout - dirty solution?
     for loggr in logger.handlers:
         loggr.setFormatter(formatter_new)
     for line in iter(pipe.readline, b''): # b'\n'-separated lines
         logger.info('%s', line.decode('utf-8').strip().strip('\"').replace(r'\n', '\n'))
+        if self and self.is_aborted():
+            logger.warning("Task shows up as aborting in log_subprocess_output, raising Exception")
+            raise RevokeChainRequested("Task aborted mid-execution")
     # return back to normal formatting
     for loggr in logger.handlers:
         loggr.setFormatter(logging.Formatter('[%(asctime)s][%(levelname)s] %(message)s'))
@@ -92,14 +128,9 @@ def check_abort_state(task_id, proc, logger):
     result = AbortableAsyncResult(task_id)
     if result.is_aborted() or result.state == 'REVOKED':
         # respect aborted state, and terminate gracefully
-        logger.warning('Task aborted')
+        logger.warning('Task aborted (check_abort_state)')
         proc.kill()
-        try:
-            os.kill(proc.pid)
-        except:
-            pass
-        logger.warning('Task killed')
-        raise ChildProcessError(f'Task with PID {proc.pid} aborted by user')
+        raise RevokeChainRequested(f'Task with PID {proc.pid} aborted by user')
 
 
 def call_repeatedly(secs, func, task_id, proc, logger):
@@ -140,7 +171,6 @@ def setup_process(self, result, job_id, *args, **kwargs):
     # Logging
     logger = get_task_logger(self.request.id)
     app.log.redirect_stdouts_to_logger(logger, loglevel=logging.INFO)
-    logger.info(f'Result/returncode of previous task was {result}')
     logger.info(f'Task {self.request.task} started with args={args}, kwargs={kwargs}. Job ID = {job_id}')
 
     # Filepath extractions
@@ -154,7 +184,7 @@ def setup_process(self, result, job_id, *args, **kwargs):
 
 @shared_task(bind=True, name="update_db")
 def update_db_post_run(self, result=None, job_id=None, *args, **kwargs):
-    """updates database entries after a (sub)task is finished. Updates duration, status, finish time"""
+    """updates database entries after a chain/pipeline is finished. Updates duration, status, finish time"""
     job = Job.objects.filter(id=job_id)
     finished_date = timezone.now()
     duration = finished_date - job.get().start_date
@@ -167,22 +197,23 @@ def update_db_post_run(self, result=None, job_id=None, *args, **kwargs):
 
 @shared_task(bind=True, name="result_email")  # TODO
 def send_result_email(self, result, job_id=None, *args, **kwargs):
-    """Mock SMTP result mail"""
-    job = Job.objects.get(id=job_id)
-
-    print(f'Trying to send email to {job.user.email}')
-    message = f'Dear {job.user}, \n\nyour RobustQ job has just finished after {job.duration}. \n' \
-              f'The task finished with result PoF={job.result} and status {job.status}. ' \
-              f'\nThank you for using our service!'
-    try:
-        send_mail(
-            'Your RobustQ job has finished',
-            message,
-            'robustq.info@gmail.com',
-            [job.user.email]
-        )
-    except Exception as e:
-        print('Failed to send email: ', repr(e))
+    pass
+    # """Mock SMTP result mail"""
+    # job = Job.objects.get(id=job_id)
+    #
+    # print(f'Trying to send email to {job.user.email}')
+    # message = f'Dear {job.user}, \n\nyour RobustQ job has just finished after {job.duration}. \n' \
+    #           f'The task finished with result PoF={job.result} and status {job.status}. ' \
+    #           f'\nThank you for using our service!'
+    # try:
+    #     send_mail(
+    #         'Your RobustQ job has finished',
+    #         message,
+    #         'robustq.info@gmail.com',
+    #         [job.user.email]
+    #     )
+    # except Exception as e:
+    #     print('Failed to send email: ', repr(e))
 
 
 @shared_task(bind=True, name="SBML_processing")
@@ -327,19 +358,21 @@ def compress_network(self, result, job_id, *args, **kwargs):
 
     try:
         compress_process = subprocess.Popen(cmd_args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-        cache.set("running_task_pid", compress_process.pid)
-        threading.Thread(target=call_repeatedly, args=(3, check_abort_state, self.request.id, compress_process,
+        update_meta_info(self, job_id, compress_process.pid)
+        threading.Thread(target=call_repeatedly, args=(1, check_abort_state, self.request.id, compress_process,
                                                        logger)).start()
 
         with compress_process.stdout:
             log_subprocess_output(compress_process.stdout, logger=logger)
-            if self.is_aborted():
-                # respect aborted state, and terminate gracefully.
-                logger.warning('Task aborted')
-                compress_process.kill()
 
         compress_process.wait()
-
+    except SoftTimeLimitExceeded as e:
+        AbortableAsyncResult(self.request.id).abort()
+        compress_process.kill()
+        raise RevokeChainRequested(repr(e))
+    except RevokeChainRequested as e:
+        compress_process.kill()
+        raise e
     except Exception as e:
         logger.error(repr(e))
         raise e
@@ -457,23 +490,40 @@ def defigueiredo(self, result, job_id, cardinality, *args, **kwargs):
         logger.info(f'Starting {self.request.task} with the following arguments: {" ".join(cmd_args)}')
 
         defigueiredo_process = subprocess.Popen(cmd_args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-        cache.set("running_task_pid", defigueiredo_process.pid)
+
+        update_meta_info(self, job_id, defigueiredo_process.pid)
+        threading.Thread(target=call_repeatedly, args=(1, check_abort_state, self.request.id, defigueiredo_process,
+                                                       logger)).start()
 
         with defigueiredo_process.stdout:
-            log_subprocess_output(defigueiredo_process.stdout, logger=logger)
-            if self.is_aborted():
-                # respect aborted state, and terminate gracefully.
-                logger.warning('Task aborted')
-                defigueiredo_process.kill()
+            log_subprocess_output(defigueiredo_process.stdout, logger=logger, self=self, pid=defigueiredo_process.pid)
 
         defigueiredo_process.wait()
 
+    except SoftTimeLimitExceeded as e:
+        try:
+            defigueiredo_process.kill()
+            os.kill(defigueiredo_process.pid, signal.SIGKILL)
+            AbortableAsyncResult(self.request.id).abort()
+        except ProcessLookupError:
+            pass
+        raise RevokeChainRequested(repr(e))
+
+    except RevokeChainRequested as e:
+        defigueiredo_process.kill()
+        raise e
+
     except Exception as e:
         logger.error(repr(e))
-        raise e
+        raise RevokeChainRequested(repr(e))
 
     os.chdir(BASE_DIR)
 
+    # one final check - sleep to let the other worker catch up
+    time.sleep(2)
+    if self.is_aborted():
+        raise RevokeChainRequested("Task aborted!")
+    time.sleep(1)
     return defigueiredo_process.returncode
 
 
@@ -580,18 +630,32 @@ def pofcalc(self, result, job_id, cardinality, *args, **kwargs):
             logger.info(f'Starting {self.request.task} with the following arguments: {" ".join(cmd_args)}')
 
         pofcalc_process = subprocess.Popen(cmd_args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-        cache.set("running_task_pid", pofcalc_process.pid)
+
+        update_meta_info(self, job_id, pofcalc_process.pid)
+
         threading.Thread(target=call_repeatedly, args=(3, check_abort_state, self.request.id, pofcalc_process,
                                                        logger)).start()
-        pofcalc_process.wait()
-        out, err = pofcalc_process.communicate()
-        out = out.decode('utf-8').strip().strip('\"').replace(r'\n', '\n')
-        logger.info(out)
-        if err:
-            logger.error(err)
-            raise Exception(err)
+        stout = []
+        with pofcalc_process.stdout:
+            for line in iter(pofcalc_process.stdout.readline, b''):
+                line = line.decode('utf-8').strip().strip('\"').replace(r'\n', '\n').replace(r'\x08', '')
+                if '%' not in line:
+                    stout.append(line)
+                if self.is_aborted():
+                    # respect aborted state, and terminate gracefully.
+                    logger.warning('Task aborted (stdoutstream)')
+                    os.kill(pofcalc_process.pid, signal.SIGTERM)
+                    pofcalc_process.kill()
 
-        out = out.splitlines() # convert to list for following steps
+        # out, err = pofcalc_process.communicate()
+        # out = out.decode('utf-8').strip().strip('\"').replace(r'\n', '\n')
+        # # logger.info(out)
+        # if err:
+        #     logger.error(err)
+        #     raise Exception(err)
+
+        # out = out.splitlines()  # convert to list for following steps
+        out = stout
         job = Job.objects.filter(id=job_id)
 
         for i in range(len(out)):
@@ -600,12 +664,13 @@ def pofcalc(self, result, job_id, cardinality, *args, **kwargs):
                 colnames = list(x.strip() for x in out[i].split('|'))
                 result = list(map(lambda x: list(y.strip() for y in x.split('|')), resulttable))
 
-                import pandas as pd
                 df = pd.DataFrame(data=result, columns=colnames)
                 filepath = os.path.join(path, f'result_table_{model_name}.csv')
                 df.to_csv(filepath, index=False)
                 job.update(result_table=filepath)
                 break
+
+        logger.info('\n'.join(out))
 
         if 'Final PoF' in out[-1]:
             # gets the result from the process output
@@ -616,6 +681,17 @@ def pofcalc(self, result, job_id, cardinality, *args, **kwargs):
             job.update(result=pof_result)  # stores the string of the result
 
         logger.info(f'Finished!')
+        pofcalc_process.wait()
+
+    except SoftTimeLimitExceeded as e:
+        try:
+            pofcalc_process.kill()
+            os.kill(pofcalc_process.pid, signal.SIGKILL)
+            AbortableAsyncResult(self.request.id).abort()
+        except ProcessLookupError:
+            pass
+        raise RevokeChainRequested(repr(e))
+
     except Exception as e:
         logger.error(repr(e))
         raise e
@@ -628,11 +704,6 @@ def pofcalc(self, result, job_id, cardinality, *args, **kwargs):
         return float(pof_result) if pof_result else pofcalc_process.returncode
 
 
-@shared_task(bind=True, name="release_lock")
-def release_lock(self, *args, **kwargs):  # currently not used
-    cache.delete("running_job")
-
-
 @shared_task(bind=True, name="abort_task", ignore_result=True)
 def abort_task(self, *args, **kwargs):
     res = AbortableAsyncResult(kwargs['t_id'])
@@ -640,7 +711,7 @@ def abort_task(self, *args, **kwargs):
     res.abort()
 
 
-@shared_task(bind=True, name="execute_pipeline", base=AbortableTask)
+@shared_task(bind=True, name="execute_pipeline", base=AbortableTask, time_limit=settings.CELERY_TASK_TIME_LIMIT+1000)
 def execute_pipeline(self, job_id, compression_checked, cardinality_defi,
                      cardinality_pof, make_consistent, *args, **kwargs):
     """
@@ -665,6 +736,7 @@ def execute_pipeline(self, job_id, compression_checked, cardinality_defi,
     if this_result.is_aborted() or this_result.status == 'REVOKED' or job.status == 'Cancelled' \
             or this_result.status == 'ABORTED':
         return 'ABORTED'
+    pipe_cache = f'pipeline_{job_id}'
 
     cache.set('running_job', job_id, timeout=10000)
     logger, fpath, path, fname, model_name, extension = setup_process(self, job_id=job_id, result=None, *args,
@@ -679,7 +751,6 @@ def execute_pipeline(self, job_id, compression_checked, cardinality_defi,
                    mcs_to_binary.s(job_id=job_id, do_compress=compression_checked),
                    pofcalc.s(job_id=job_id, cardinality=cardinality_pof, do_compress=compression_checked),
                    update_db_post_run.s(job_id=job_id),
-                   release_lock.s(),
                    send_result_email.s(job_id=job_id)
                    ).on_error(abort_task.s(t_id=self.request.id)).apply_async()
 
@@ -694,13 +765,25 @@ def execute_pipeline(self, job_id, compression_checked, cardinality_defi,
 
     while not result.ready():  # this blocks the worker from starting another task before the previous one has finished
         for parent in parents:
-            if parent.status == 'FAILURE' or parent.status == 'REVOKED':
+            if parent.status == 'FAILURE' or parent.status == 'REVOKED' or AbortableAsyncResult(parent.id).is_aborted():
                 try:
                     name = parent._cache['task_name']
                 except:  # broad exception clause because could be AttributeError or ValueError or TypeError
                     name = None
                 logger.error(f'Task {parent.id}, {name} ended with status {parent.status}!')
-                return result.task_id
+                this_result.abort()
+                self.update_state(state='FAILURE', meta={'reason': f'{name} failed/got aborted'})
+            if parent.status == 'STARTED':
+                if not cache.get(pipe_cache):
+                    name = parent.name or 'unspecified'
+                    cache.set(pipe_cache, {
+                        'name': name,
+                        'task_id': parent.id,
+                        'status': parent.status,
+                        'pipeline_id': this_result.id,
+                        'job_id': job_id
+                    }, timeout=86400)
+        job.refresh_from_db()
         if this_result.is_aborted() or this_result.status == 'REVOKED' or job.status == 'Cancelled':
             # if this (execute_pipeline) task has been revoked (by clicking 'cancel'), revoke all tasks in the chain
             # as well to stop them from being executed
@@ -708,25 +791,20 @@ def execute_pipeline(self, job_id, compression_checked, cardinality_defi,
             result.revoke()
             for parent in parents:
                 if parent.status == 'STARTED':
-                    parent.revoke(terminate=True, signal=signal.SIGTERM)
                     AbortableAsyncResult(parent.id).abort()
-                if parent.status == 'PENDING':
                     parent.revoke()
-            revoke_job(job)
+                    logger.warning(f'Cancelling current running task {parent.id}')
+                    if job_id == cache.get('current_job'):
+                        try:
+                            os.kill(cache.get('running_task_pid'), signal.SIGTERM)
+                        except ProcessLookupError:
+                            logger.warning(f'No (valid) PID found for task cancel.')
+                if parent.status == 'PENDING':
+                    logger.warning(f'Revoking pending task {parent.id}')
+                    parent.revoke()
+            logger.warning(f'Job {job_id} now has status {job.status} (after loop)')
             break
 
         time.sleep(1)
 
     return result.task_id
-
-
-@shared_task(bind=True, name='testjob')
-def testjob(self, nr_jobs=3, user_id=2, job_start=270, *args, **kwargs):
-    from users.models import User
-
-    user = User.objects.get(id=user_id)
-    highest_job_nr = Job.objects.all().order_by('-id').first().id
-    print(f'Using files from Job {highest_job_nr}')
-    for i in range(nr_jobs):
-        sbml_dummy = Job.objects.get(id=job_start+i).sbml_file
-        Job.objects.create(user=user, sbml_file=sbml_dummy)

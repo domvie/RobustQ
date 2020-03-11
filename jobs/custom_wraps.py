@@ -1,6 +1,11 @@
 from functools import wraps
 from celery.result import AsyncResult
+from celery.contrib.abortable import AbortableAsyncResult
 from celery.utils.log import get_task_logger
+from django.core.cache import cache
+import os
+import signal
+from celery.exceptions import TimeLimitExceeded
 
 """custom revoke chain Exception"""
 
@@ -28,10 +33,37 @@ def revoke_chain_authority(a_shared_task):
             #     self.request.callbacks = None
             if self.request.chain:
                 self.request.chain = None
-            res = AsyncResult(self.request.id)
-            res.revoke()
+
+            res = AbortableAsyncResult(self.request.id)
+            job_id = cache.get('current_job')
+            job_task = kwargs.get('job_id')
             logger = get_task_logger(self.request.id)
             logger.error(e.return_value)
+
+            if job_id == job_task:
+                logger.info("Revoking from within RCE")
+                try:
+                    os.kill(cache.get(f'pipeline_{job_id}').get('pid'), signal.SIGTERM)
+                except ProcessLookupError:
+                    logger.error("No process matching PID found (RCE)")
+                except AttributeError:
+                    logger.error('Cache object returned null/couldnt get pid')
+            try:
+                res.abort()
+            except:
+                res.revoke()
+
+            raise e
+        except TimeLimitExceeded as e:
+            if self.request.chain:
+                self.request.chain = None
+            res = AbortableAsyncResult(self.request.id)
+            res.abort()
+            try:
+                job_id = kwargs.get('job_id')
+                os.kill(cache.get(f'pipeline_{job_id}').get('pid'), signal.SIGKILL)
+            except:
+                pass
             raise e
 
     return inner

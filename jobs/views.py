@@ -322,8 +322,9 @@ def cancel_job(request, pk):
 
     try:
         revoke_job(job)
+        return HttpResponse(status=204)
     except:
-        return HttpResponse('Failed to cancel job')
+        return HttpResponse('Failed to cancel job', status=400)
 
 
 @login_required
