@@ -17,7 +17,7 @@ import shutil
 from celery import chain
 from celery.contrib.abortable import AbortableTask, AbortableAsyncResult
 import threading
-from .custom_wraps import revoke_chain_authority, RevokeChainRequested
+from .custom_wraps import revoke_chain_authority, RevokeChainRequested, test
 from django.conf import settings
 from django.core.mail import send_mail
 from io import StringIO
@@ -27,20 +27,20 @@ from celery.contrib import rdb
 import pandas as pd
 
 
+# TODO pack into functions, wraps,
+
 BASE_DIR = os.getcwd()
 
 
 class Capturing(list):
     """Captures stdout of certain functions and saves them in a list"""
     def __enter__(self):
-        self._stdout = sys.stdout
-        sys.stdout = self._stringio = StringIO()
+        self._stringio = StringIO()
         return self
 
     def __exit__(self, *args):
-        self.extend(self._stringio.getvalue())
+        self.append(self._stringio.getvalue())
         del self._stringio    # free up some memory
-        sys.stdout = self._stdout
 
 
 def revoke_job(job):
@@ -148,8 +148,12 @@ def cleanup_expired_results():
     expired = timezone.now() - timedelta(days=settings.DAYS_UNTIL_JOB_DELETE)
     print(f'Deleting expired jobs. All jobs, that have started before {expired} will be deleted now.')
     jobs = Job.objects.filter(start_date__lt=expired)
-    for job in jobs:
+    for job in jobs: # TODO
         shutil.rmtree(os.path.dirname(job.sbml_file.path), ignore_errors=True)
+        try:
+            shutil.rmtree(os.path.dirname(job.public_path))
+        except:
+            pass
     jobs.delete()
 
     # TODO delete taskresults?

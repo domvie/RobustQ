@@ -26,6 +26,7 @@ def revoke_chain_authority(a_shared_task):
     @wraps(a_shared_task)
     def inner(self, *args, **kwargs):
         try:
+            # 'begin second wrap
             return a_shared_task(self, *args, **kwargs)
         except RevokeChainRequested as e:
             # Drop subsequent tasks in chain (if not EAGER mode)
@@ -66,4 +67,12 @@ def revoke_chain_authority(a_shared_task):
                 pass
             raise e
 
+    return inner
+
+
+def test(taski):
+    @wraps(taski)
+    def inner(self, *args, **kwargs):
+        # 'In first wrap begin'
+        return taski(self, *args, **kwargs)
     return inner

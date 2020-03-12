@@ -224,4 +224,8 @@ def task_sent_handler(sender=None, headers=None, body=None, **kwargs):
 @receiver(pre_delete, sender=Job)
 def pre_delete_handler(sender, instance, using, *args, **kwargs):
     #  make sure we cancel any celery jobs before deleting
-    revoke_job(instance)
+    if not instance.is_finished:
+        try:
+            revoke_job(instance)
+        except ValueError:  # when AsyncResult does not get valid id
+            pass

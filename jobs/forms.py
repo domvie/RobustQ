@@ -115,7 +115,9 @@ class JobTable(tables.Table):
                     "orderable": "sortable",  # Instead of `orderable`
                     # "ascending": "ascend",  # Instead of `asc`
                     # "descending": "descend"  # Instead of `desc`
-                }
-            }
+                },
+                "class": "text text-center",
+            },
+            "td": {"class": "text text-center"}
         }
         order_by = "-id"
