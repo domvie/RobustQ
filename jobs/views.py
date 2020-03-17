@@ -60,8 +60,7 @@ def upload_progress(request, uuid):
         return HttpResponseServerError('Server Error: You must provide X-Progress-ID header or query param.')
 
 
-class NewJobView(LoginRequiredMixin, CreateView, FormMixin):
-    """Class based view for creating a new job (input form)"""
+class NewJobMixin(CreateView, FormMixin):
     model = Job
     template_name = 'jobs/new.html'
     form_class = JobSubmissionForm
@@ -212,6 +211,11 @@ class NewJobView(LoginRequiredMixin, CreateView, FormMixin):
         data['total'] += zip_total
         data['done'] += 1
         cache.set(uuid, data)
+
+
+class NewJobView(LoginRequiredMixin, NewJobMixin):
+    """Class based view for creating a new job (input form)"""
+    pass
 
 
 class JobOverView(LoginRequiredMixin, SingleTableView, ListView):

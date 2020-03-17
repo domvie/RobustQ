@@ -44,7 +44,9 @@ def revoke_chain_authority(a_shared_task):
             if job_id == job_task:
                 logger.info("Revoking from within RCE")
                 try:
-                    os.kill(cache.get(f'pipeline_{job_id}').get('pid'), signal.SIGTERM)
+                    pid = cache.get(f'pipeline_{job_id}').get('pid')
+                    if pid:
+                        os.kill(pid, signal.SIGTERM)
                 except ProcessLookupError:
                     logger.error("No process matching PID found (RCE)")
                 except AttributeError:

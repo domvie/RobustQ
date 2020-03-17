@@ -28,6 +28,7 @@ import pandas as pd
 
 
 # TODO pack into functions, wraps,
+# TODO styling, upload indicator when only one zip, exception in pofcalc (nonetype/int job nr 308)
 
 BASE_DIR = os.getcwd()
 

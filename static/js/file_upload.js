@@ -41,6 +41,11 @@ $(function() {
         // Append X-Progress-ID uuid form action
         this.action += (this.action.indexOf('?') === -1 ? '?' : '&') + 'X-Progress-ID=' + uuid;
 
+        if (nr_files === 1) {
+            // check if its a zip
+            var ext = $('#id_sbml_file')[0].files[0].name.split('.').pop();
+            if (ext === 'zip') nr_files += 1;
+        }
 
         // Update progress bar
         function update_progress_info() {

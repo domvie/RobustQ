@@ -4,8 +4,9 @@ from django.urls import reverse_lazy
 from jobs.forms import JobSubmissionForm
 from django.conf import settings
 from django.template.defaultfilters import filesizeformat
-from jobs.views import NewJobView
+from jobs.views import NewJobMixin
 from jobs.models import Job
+from django.contrib.auth.mixins import LoginRequiredMixin
 
 
 # # TODO class based view
@@ -37,14 +38,15 @@ def about(request):
     return HttpResponse('<h1>About</h1>')
 
 
-class IndexView(NewJobView):
+class IndexView(NewJobMixin):
 
     template_name = 'index/index.html'
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data()
-        jobs = self.request.user.job_set.all()
-        running_jobs = jobs.filter(is_finished='False')
-        context['running_jobs'] = running_jobs
-        context['jobs'] = jobs
+        if self.request.user.is_authenticated:
+            jobs = self.request.user.job_set.all()
+            running_jobs = jobs.filter(is_finished='False')
+            context['running_jobs'] = running_jobs
+            context['jobs'] = jobs
         return context
