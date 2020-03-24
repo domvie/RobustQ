@@ -717,7 +717,8 @@ def abort_task(self, *args, **kwargs):
     res.abort()
 
 
-@shared_task(bind=True, name="execute_pipeline", base=AbortableTask, time_limit=settings.CELERY_TASK_TIME_LIMIT+1000)
+@shared_task(bind=True, name="execute_pipeline", base=AbortableTask, time_limit=settings.CELERY_TASK_TIME_LIMIT,
+             soft_time_limit=settings.CELERY_TASK_SOFT_TIME_LIMIT)
 def execute_pipeline(self, job_id, compression_checked, cardinality_defi,
                      cardinality_pof, make_consistent, *args, **kwargs):
     """
@@ -769,48 +770,59 @@ def execute_pipeline(self, job_id, compression_checked, cardinality_defi,
         parents.append(copy.parent)
         copy = copy.parent
 
-    while not result.ready():  # this blocks the worker from starting another task before the previous one has finished
+    def check_parents(parents):
+        """ loops through all tasks in a chain, checks their status and aborts if need be"""
         for parent in parents:
-            if parent.status == 'FAILURE' or parent.status == 'REVOKED' or AbortableAsyncResult(parent.id).is_aborted():
-                try:
-                    name = parent._cache['task_name']
-                except:  # broad exception clause because could be AttributeError or ValueError or TypeError
-                    name = None
-                logger.error(f'Task {parent.id}, {name} ended with status {parent.status}!')
-                this_result.abort()
-                self.update_state(state='FAILURE', meta={'reason': f'{name} failed/got aborted'})
             if parent.status == 'STARTED':
-                if not cache.get(pipe_cache):
-                    name = parent.name or 'unspecified'
-                    cache.set(pipe_cache, {
-                        'name': name,
-                        'task_id': parent.id,
-                        'status': parent.status,
-                        'pipeline_id': this_result.id,
-                        'job_id': job_id
-                    }, timeout=86400)
-        job.refresh_from_db()
-        if this_result.is_aborted() or this_result.status == 'REVOKED' or job.status == 'Cancelled':
-            # if this (execute_pipeline) task has been revoked (by clicking 'cancel'), revoke all tasks in the chain
-            # as well to stop them from being executed
-            logger.warning(f'Task {self.request.id} was flagged as revoked or got aborted, status {this_result.status}')
-            result.revoke()
+                AbortableAsyncResult(parent.id).abort()
+                parent.revoke()
+                logger.warning(f'Cancelling current running task {parent.id}')
+                if job_id == cache.get('current_job'):
+                    try:
+                        os.kill(cache.get('running_task_pid'), signal.SIGTERM)
+                    except ProcessLookupError:
+                        logger.warning(f'No (valid) PID found for task cancel.')
+            if parent.status == 'PENDING':
+                logger.warning(f'Revoking pending task {parent.id}')
+                parent.revoke()
+
+    try:
+        while not result.ready():  # this blocks the worker from starting another task before the previous one has finished
             for parent in parents:
+                if parent.status == 'FAILURE' or parent.status == 'REVOKED' or AbortableAsyncResult(parent.id).is_aborted():
+                    try:
+                        name = parent._cache['task_name']
+                    except:  # broad exception clause because could be AttributeError or ValueError or TypeError
+                        name = None
+                    logger.error(f'Task {parent.id}, {name} ended with status {parent.status}!')
+                    this_result.abort()
+                    self.update_state(state='FAILURE', meta={'reason': f'{name} failed/got aborted'})
                 if parent.status == 'STARTED':
-                    AbortableAsyncResult(parent.id).abort()
-                    parent.revoke()
-                    logger.warning(f'Cancelling current running task {parent.id}')
-                    if job_id == cache.get('current_job'):
-                        try:
-                            os.kill(cache.get('running_task_pid'), signal.SIGTERM)
-                        except ProcessLookupError:
-                            logger.warning(f'No (valid) PID found for task cancel.')
-                if parent.status == 'PENDING':
-                    logger.warning(f'Revoking pending task {parent.id}')
-                    parent.revoke()
-            logger.warning(f'Job {job_id} now has status {job.status} (after loop)')
-            break
+                    if not cache.get(pipe_cache):
+                        name = parent.name or 'unspecified'
+                        cache.set(pipe_cache, {
+                            'name': name,
+                            'task_id': parent.id,
+                            'status': parent.status,
+                            'pipeline_id': this_result.id,
+                            'job_id': job_id
+                        }, timeout=86400)
+            job.refresh_from_db()
+            if this_result.is_aborted() or this_result.status == 'REVOKED' or job.status == 'Cancelled':
+                # if this (execute_pipeline) task has been revoked (by clicking 'cancel'), revoke all tasks in the chain
+                # as well to stop them from being executed
+                logger.warning(f'Task {self.request.id} was flagged as revoked or got aborted, status {this_result.status}')
+                result.revoke()
+                check_parents(parents)
+                logger.warning(f'Job {job_id} now has status {job.status} (after loop)')
+                break
 
-        time.sleep(1)
+            time.sleep(1)
 
-    return result.task_id
+        return result.task_id
+    except SoftTimeLimitExceeded as e:
+        this_result.abort()
+        check_parents(parents)
+        revoke_job(job)
+        logger.error(repr(e))
+        raise e

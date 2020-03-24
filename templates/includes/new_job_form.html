@@ -54,7 +54,7 @@
 
                     <div class="row">
                         <div class="col-sm-1 text-right pr-1">
-                    {{ job_form.cardinality_defigueiredo }}
+                    {{ job_form.cardinality_mcs }}
                         </div>
                         <div class="col-sm-6 text-left pl-1">
                     <label for="cardinality">Cardinality for MCS count <small>(for larger models, only =< 3 feasible)</small></label><br>
@@ -65,8 +65,8 @@
                         <div class="col-sm-1 text-right pr-1">
                     {{ job_form.cardinality_pof }}
                         </div>
-                        <div class="col-sm-6 text-left pl-1">
-                    <label for="cardinality">Cardinality for failureprobability <small>(for larger models, only =< 15 feasible)</small></label><br>
+                        <div class="col-sm-7 text-left pl-1">
+                    <label for="cardinality">Cardinality for failureprobability <small>(for larger models, only =< 9 feasible)</small></label><br>
                         </div>
                     </div>
 
@@ -89,8 +89,9 @@
                     </div>
                 </div>
         </form>
-        <small>Info: Your job and all of its data will be automatically <strong>deleted after 14 days</strong>.
-            Please make sure to download any results before.</small>
+        <small>Info: Maximum runtime for a single job is currently {{ timelimit|floatformat }} hours, after which it
+            automatically terminates. Your job and all of its data will be <strong>deleted after 14 days</strong>.
+            Please make sure to download any results beforehand.</small>
     </div>
 </div>
 

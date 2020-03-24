@@ -78,6 +78,7 @@ class NewJobMixin(CreateView, FormMixin):
         context['job_form'] = context['form']
         context['max_upload'] = filesizeformat(settings.MAX_UPLOAD_SIZE)
         context['allowed_ext'] = ',.'.join(settings.ALLOWED_EXTENSIONS)
+        context['timelimit'] = (settings.CELERY_TASK_TIME_LIMIT)/3600
         return context
 
     # Overriding the post method
@@ -256,13 +257,13 @@ class JobDetailView(LoginRequiredMixin, UserPassesTestMixin, DetailView):
         job = context['object']
         job_dict = model_to_dict(job)
         to_pop = ['public_path', 'task_id_job', 'ip', 'sbml_file', 'user']
-
+        # to_pop = []
         context['rt'] = job_dict.pop('result_table')
         for k, v in job_dict.items():
             if v is None:
                 to_pop.append(k)
         for k in to_pop:
-            job_dict.pop(k)
+            job_dict.pop(k, None)
 
         context['job'] = job_dict
 

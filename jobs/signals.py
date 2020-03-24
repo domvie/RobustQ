@@ -35,7 +35,7 @@ def start_job(sender, instance, created, **kwargs):
     # get params
     id = instance.id
     compression_checked = instance.compression
-    cardinality_defi = instance.cardinality_defigueiredo
+    cardinality_defi = instance.cardinality_mcs
     cardinality_pof = instance.cardinality_pof
     make_consistent = instance.make_consistent
 

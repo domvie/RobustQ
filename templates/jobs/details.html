@@ -8,29 +8,29 @@
 
 {% block content %}
     <style>
-        table {
-            border-collapse: separate;
-        }
+        {#table {#}
+        {#border-collapse: separate;#}
+        {# }#}
 
-        thead th {
-            background-color: #006DCC;
-            color: white;
-        }
+        {#thead th {#}
+        {#    background-color: #006DCC;#}
+        {#    color: white;#}
+        {# }#}
 
-        tbody td {
-            background-color: #EEEEEE;
-        }
+        {#tbody td {#}
+        {#    background-color: #EEEEEE;#}
+        {# }#}
 
         {#tr td:first-child,#}
         {#tr th:first-child {#}
-        {#    border-top-left-radius: 6px;#}
-        {#    border-bottom-left-radius: 6px;#}
+        {#    border-top-left-radius: 8px;#}
+        {#    border-bottom-left-radius: 8px;#}
         {# }#}
         {##}
         {#tr td:last-child,#}
         {#tr th:last-child {#}
-        {#    border-top-right-radius: 6px;#}
-        {#    border-bottom-right-radius: 6px;#}
+        {#    border-top-right-radius: 8px;#}
+        {#    border-bottom-right-radius: 8px;#}
         {# }#}
 
     </style>
@@ -54,11 +54,11 @@
                         {% if job %}
                             <br>
 
-                            <table class="table table-sm table-condensed table-striped table-hover">
+                            <table class="table table-sm table-condensed table-hover">
                                 {% for key, value in job.items %}
                                     <tr class="row">
                                         {#                                <div class="d-sm-inline-flex flex-sm-row align-item-sm-center">#}
-                                        <td class="thead-dark col-sm-3"><b>{{ key|upper }}</b></td>
+                                        <td class="table-light col-sm-3"><b>{{ key|upper }}</b></td>
                                         <td class="table-light col-sm-9">{{ value }} </td>
                                         {#                                </div>#}
                                     </tr>
@@ -66,113 +66,20 @@
                             </table>
 
                             {% if tasks %}
-                                <p class="h4">Task details <a class="text text-secondary" onclick="toggle_tasks()">
-                                    <i class="fas fa-toggle-on" id="toggle_btn"> </i> </a></p>
-
-
-                                <div id="subtasks">
-                                    <small>Subtask {{ forloop.counter }}</small>
-                                    <br>
-                                    {% for task in tasks %}
-                                        <div class="card m-1" style="border-radius: 14px;">
-                                            {#                                    <thead>#}
-                                            {#                                    <tr>#}
-                                            {#                                        <th>#}
-                                            <div class="card-header text text-light" style="background-color: #006DCC;
-                                            border-top-left-radius: 14px; border-top-right-radius: 14px;">
-                                                <strong>{{ task.name }}</strong>
-                                            </div>
-                                            {#                                        </th>#}
-                                            {#                                    </tr>#}
-                                            {#                                    </thead>#}
-                                            <div class="card-body">
-                                                <table class="table table-sm table-condensed">
-                                                    {% for key, value in task.items %}
-                                                        {% if value is not None %}
-                                                            {% if key == 'task_result' %}
-                                                                {% for k, v in value.items %}
-                                                                    <tr class="row td-inner">
-                                                                        <td class="table-secondary col-sm-3">{{ k|upper }}</td>
-                                                                        <td class="table-light col-sm-9">{{ v|safe }}</td>
-                                                                    </tr>
-                                                                {% endfor %}
-
-                                                            {% else %}
-
-                                                                <tr class="row">
-
-                                                                    <td class="table-secondary col-sm-3">{{ key|upper }}</td>
-
-                                                                    {% if key == 'logfile' %}
-                                                                        <td class="table-light col-sm-9">
-                                                                            <a class="btn btn-sm btn-outline-secondary"
-                                                                               data-toggle="collapse"
-                                                                               href="#log_{{ task.name }}" role="button"
-                                                                               aria-expanded="false"
-                                                                               aria-controls="log_{{ task.name }}">Logdata</a>
-                                                                            <a href="{{ task.logfile.path }}"
-                                                                               class="btn btn-sm btn-outline-secondary">Download</a>
-                                                                        </td></tr>
-                                                                        <tr class="row" style="border: none;">
-                                                                        <td class="table-light col"
-                                                                            style="border: none;">
-                                                                            <div class="collapse p-2"
-                                                                                 id="log_{{ task.name }}">
-
-                                                                                <div class="card card-body"
-                                                                                     style="height: 30rem">
-                                                                                    <div class="container overflow-auto"
-                                                                                         style="height: 30rem">
-                                                                                        <code style="color: black;">
-                                                                                            {% for line in task.logfile.logdata %}
-                                                                                                <br>
-                                                                                                {{ line }}
-                                                                                            {% endfor %}
-                                                                                        </code>
-                                                                                    </div>
-                                                                                </div>
-
-                                                                            </div>
-                                                                        </td>
-
-                                                                    {% else %}
-                                                                        <td class="table-light col-sm-9">{{ value|safe }}</td>
-                                                                    {% endif %}
-
-                                                                    </tr>
-
-                                                            {% endif %}
-                                                        {% endif %}
-
-                                                    {% endfor %}
-
-                                                </table>
-                                            </div>
-                                        </div>
-                                    {% endfor %}
-                                </div>
-
-                                <script>
-                                    var toggle_btn = $('#toggle_btn');
-                                    var subtasks = $('#subtasks');
-                                    toggle_tasks = () => {
-                                        subtasks.toggle();
-                                        toggle_btn.toggleClass('fa-toggle-on fa-toggle-off')
-                                    }
-
-                                </script>
-
                                 {% if rt %}
                                     <br>
-                                    <label for="result_table" class="h2">Result
+                                    <label for="result_table" class="modal-header p-0"><h2>Result</h2>
                                         <a href="{% url 'result_table' job.id 'csv' %}"
                                            class="btn btn-sm btn-outline-secondary">
-                                            <i class="fas fa-download"></i></a>
+                                            <i class="fas fa-download text text-right right"></i></a>
                                     </label>
-                                    <table id="result_table" class="table-striped table-condensed"
+                                    {% if job.result %}
+                                        <h5 class="center">PoF = {{ job.result }}</h5>
+                                    {% endif %}
+                                    <table id="result_table" class="table-condensed"
                                            style="border: none;" data-sortable="false"
                                            data-toggle="result_table" data-url="{% url 'result_table' job.id 'json' %}">
-                                        <thead>
+                                        <thead class="bg-primary text-white">
                                         <tr>
                                             <th data-field="d" class="text-center">d</th>
                                             <th data-field="weight" class="text-center">weight</th>
@@ -198,6 +105,77 @@
                                     </script>
                                     <br>
                                 {% endif %}
+
+                                <p class="h4">Task details</p>
+
+                                <div id="subtasks">
+                                    <br>
+                                    <table class="table table-sm table-condensed table-hover table-bordered">
+                                        <thead class="bg-primary text-white">
+                                        <tr>
+                                            <th>#</th>
+                                            <th class="col-sm-6">Task</th>
+                                            <th class="col-sm-2">Status</th>
+                                            <th class="col-sm-2">Duration</th>
+                                            <th class="col-sm-1">Logs</th>
+                                        </tr>
+                                        </thead>
+                                        {% for task in tasks %}
+                                            <tr>
+                                                <td>
+                                                    {{ forloop.counter }}
+                                                </td>
+                                                <td>
+                                                    <strong>{{ task.name }}</strong>
+                                                </td>
+                                                <td>
+                                                    {{ task.task_result.status }}
+                                                </td>
+                                                <td>
+                                                    {{ task.duration }}
+                                                </td>
+                                                <td>
+                                                    <a class="btn btn-sm btn-outline-secondary"
+                                                       data-toggle="modal"
+                                                       data-target="#log_{{ task.name }}" role="button"
+                                                       aria-expanded="false"
+                                                       aria-controls="log_{{ task.name }}">Logdata</a>
+                                                    <div class="modal fade" id="log_{{ task.name }}"
+                                                         tabindex="-1" role="dialog"
+                                                         aria-labelledby="{{ task.name }} Log"
+                                                         aria-hidden="true">
+                                                        <div class="modal-dialog modal-dialog-centered modal-xl"
+                                                             role="document">
+                                                            <div class="modal-content">
+                                                                <div class="modal-header">
+                                                                    <h5 class="modal-title">
+                                                                        Log data for {{ task.name }}</h5>
+                                                                    <a href="{{ task.logfile.path }}"
+                                                                       class="btn btn-sm btn-outline-secondary right ">Download</a>
+
+                                                                </div>
+                                                                <div class="modal-body">
+                                                                    <div class="container overflow-auto"
+                                                                         style="height: 30rem">
+                                                                        <code style="color: black;">
+                                                                            {% for line in task.logfile.logdata %}
+                                                                                <br>
+                                                                                {{ line }}
+                                                                            {% endfor %}
+                                                                        </code>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        {% endfor %}
+                                    </table>
+
+                                </div>
+
+
                             {% endif %}
                             <div class="btn-group">
                                 <a href="{% url 'jobs' %}" class="btn btn-sm btn-outline-secondary"><i
