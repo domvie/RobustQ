@@ -192,7 +192,7 @@ EMAIL_HOST_PASSWORD = DB['EMAILP']
 
 MEDIA_ROOT = os.path.join(BASE_DIR, 'uploads')
 MEDIA_URL = '/uploads/'
-ALLOWED_EXTENSIONS = ['sbml', 'xml', 'json', 'zip']
+ALLOWED_EXTENSIONS = ['xml', 'json', 'zip']
 ALLOWED_CONTENT_TYPES = ['text/xml', 'application/json', 'application/zip']
 
 

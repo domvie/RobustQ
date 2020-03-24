@@ -7,7 +7,8 @@
         {% if user.is_authenticated %}
         <h3>Welcome, {{ user.username }}!</h3>
             {% if running_jobs %}
-        <p>You currently have <a href="{% url 'jobs' %}">{{ running_jobs.count }} jobs</a> running, out of a total of {{ jobs.count }} submitted.</p>
+        <p>You currently have <a href="{% url 'jobs' %}">{{ running_jobs.count }} jobs</a> running/queued,
+            out of a total of {{ jobs.count }} submitted.</p>
             {% else %}
                 <p>You currently have <a href="{% url 'jobs' %}">no running jobs.</a></p>
             {% endif %}

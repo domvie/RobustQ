@@ -17,31 +17,22 @@ import shutil
 from celery import chain
 from celery.contrib.abortable import AbortableTask, AbortableAsyncResult
 import threading
-from .custom_wraps import revoke_chain_authority, RevokeChainRequested, test
+from .custom_wraps import revoke_chain_authority, ExecutionAbortedError, test
 from django.conf import settings
 from django.core.mail import send_mail
-from io import StringIO
 import signal
 from celery.exceptions import SoftTimeLimitExceeded
-from celery.contrib import rdb
 import pandas as pd
 
 
-# TODO pack into functions, wraps,
-# TODO styling, upload indicator when only one zip, exception in pofcalc (nonetype/int job nr 308)
+# TODO styling (also all browsers), production ready, task timeout limits (exc pipeline finishes before pofcalc)
+# TODO start writing
+# TODO figure out pipeline stuff
+# TODO about/help page, footer etc.
+# TODO split this file up - pipeline tasks and this
+
 
 BASE_DIR = os.getcwd()
-
-
-class Capturing(list):
-    """Captures stdout of certain functions and saves them in a list"""
-    def __enter__(self):
-        self._stringio = StringIO()
-        return self
-
-    def __exit__(self, *args):
-        self.append(self._stringio.getvalue())
-        del self._stringio    # free up some memory
 
 
 def revoke_job(job):
@@ -54,7 +45,8 @@ def revoke_job(job):
     result.abort()
     logger = get_task_logger(task_id_job)
     print(f'REVOKING JOB {task_id_job}')
-    logger.warning("Revoking from within REVOKE_JOB")
+    if settings.DEBUG:
+        logger.warning("Revoking from within REVOKE_JOB")
     job.refresh_from_db()
     # result.revoke(terminate=True)
     if job.status != 'Cancelled':  # should be set to cancelled in task_revoked_handler (signals)
@@ -72,7 +64,6 @@ def revoke_job(job):
         if pid is not None:
             try:
                 os.kill(pid, signal.SIGKILL)  # if it is running, kill it
-                print('Successfully killed process')
             except ProcessLookupError:
                 pass
     pipe_dict = cache.get(f'pipeline_{job.id}')
@@ -80,16 +71,13 @@ def revoke_job(job):
         try:
             if pid == pipe_dict['pid']:
                 return
-            logger.warning("trying with pipe dict")
-            logger.warning(repr(pipe_dict))
-            logger.warning(f'PID IS DIFFERENT: {pid}, {pipe_dict["pid"]}')
+            if settings.DEBUG:
+                logger.warning("trying with pipe dict")
+                logger.warning(repr(pipe_dict))
+                logger.warning(f'PID IS DIFFERENT: {pid}, {pipe_dict["pid"]}')
             os.kill(pipe_dict['pid'], signal.SIGTERM)
         except:
             pass
-        pipe_id = pipe_dict.pop('pipeline_id')
-        if pipe_id:
-            logger.warning("abortion state end of revoke job:")
-            logger.warning(AbortableAsyncResult(pipe_id).is_aborted())
 
 
 def update_meta_info(self, job_id, pid):
@@ -116,8 +104,7 @@ def log_subprocess_output(pipe, logger=None, **kwargs):
     for line in iter(pipe.readline, b''): # b'\n'-separated lines
         logger.info('%s', line.decode('utf-8').strip().strip('\"').replace(r'\n', '\n'))
         if self and self.is_aborted():
-            logger.warning("Task shows up as aborting in log_subprocess_output, raising Exception")
-            raise RevokeChainRequested("Task aborted mid-execution")
+            raise ExecutionAbortedError("Task aborted mid-execution")
     # return back to normal formatting
     for loggr in logger.handlers:
         loggr.setFormatter(logging.Formatter('[%(asctime)s][%(levelname)s] %(message)s'))
@@ -129,9 +116,8 @@ def check_abort_state(task_id, proc, logger):
     result = AbortableAsyncResult(task_id)
     if result.is_aborted() or result.state == 'REVOKED':
         # respect aborted state, and terminate gracefully
-        logger.warning('Task aborted (check_abort_state)')
         proc.kill()
-        raise RevokeChainRequested(f'Task with PID {proc.pid} aborted by user')
+        raise ExecutionAbortedError(f'Task aborted by user')
 
 
 def call_repeatedly(secs, func, task_id, proc, logger):
@@ -148,7 +134,7 @@ def cleanup_expired_results():
     # objects older than x (default 14) days will be deleted
     expired = timezone.now() - timedelta(days=settings.DAYS_UNTIL_JOB_DELETE)
     print(f'Deleting expired jobs. All jobs, that have started before {expired} will be deleted now.')
-    jobs = Job.objects.filter(start_date__lt=expired)
+    jobs = Job.objects.filter(start_date__lt=expired, is_finished=True)
     for job in jobs: # TODO
         shutil.rmtree(os.path.dirname(job.sbml_file.path), ignore_errors=True)
         try:
@@ -164,7 +150,7 @@ def cleanup_expired_results():
 app.conf.beat_schedule = {
     'cleanup': {
         'task': 'jobs.tasks.cleanup_expired_results',
-        'schedule': 3600
+        'schedule': 3600 # once an hour
     }
 }
 
@@ -176,7 +162,8 @@ def setup_process(self, result, job_id, *args, **kwargs):
     # Logging
     logger = get_task_logger(self.request.id)
     app.log.redirect_stdouts_to_logger(logger, loglevel=logging.INFO)
-    logger.info(f'Task {self.request.task} started with args={args}, kwargs={kwargs}. Job ID = {job_id}')
+    if settings.DEBUG:
+        logger.info(f'Task {self.request.task} started with args={args}, kwargs={kwargs}. Job ID = {job_id}')
 
     # Filepath extractions
     fpath = Job.objects.get(id=job_id).sbml_file.path
@@ -221,6 +208,13 @@ def send_result_email(self, result, job_id=None, *args, **kwargs):
     #     print('Failed to send email: ', repr(e))
 
 
+###
+"""
+PIPELINE LOGIC BEGINS HERE 
+"""
+###
+
+
 @shared_task(bind=True, name="SBML_processing")
 def sbml_processing(self, job_id=None, make_consistent=False, *args, **kwargs):
     """First task in the workflow. Extracts info from the SBML file and if specified,
@@ -232,18 +226,16 @@ def sbml_processing(self, job_id=None, make_consistent=False, *args, **kwargs):
     #  Set start date to now
     Job.objects.filter(id=job_id).update(start_date=timezone.now())
     logger.info(f'Make model consistent = {make_consistent}')
-    logger.info(f'Trying to load SBML model {fname} in directory {path}')
+    logger.info(f'Trying to load SBML model {fname}')
 
     if extension == '.json':
         m = cobra.io.load_json_model(fpath)
     elif extension == '.xml' or extension == '.sbml':
-        with Capturing() as output:  # TODO not working
-            m = cobra.io.read_sbml_model(fpath)
-        if output:
-            logger.info(output)
+        m = cobra.io.read_sbml_model(fpath)
     else:
         logger.error(f'ERROR: input file ({fname}) missing matching extension (.json/.xml/.sbml)')
         raise Exception(f'ERROR: input file ({fname}) missing matching extension (.json/.xml/.sbml)')
+
     logger.info('Successfully loaded model.')
 
     reactions = len(m.reactions)
@@ -252,7 +244,15 @@ def sbml_processing(self, job_id=None, make_consistent=False, *args, **kwargs):
 
     # Get Biomass reaction
     # bm_rxn = m.objective.expression  # doesnt return pure id
-    bm_rxn = list(cobra.util.solver.linear_reaction_coefficients(m))[0].id
+    exp_list = list(cobra.util.solver.linear_reaction_coefficients(m))
+    if len(exp_list) > 1:
+        logger.warning(f'Multiple objective expression functions found. We will try to infer the biomass reaction from '
+                       f'this list. Other reactions may be removed by compression if you chose to compress.')
+        for rxn in exp_list:
+            if ("BIOMASS" or "biomass") in rxn.id:
+                bm_rxn = rxn.id
+    else:
+        bm_rxn = exp_list[0].id
     logger.info(f'Biomass reaction was found to be {bm_rxn}')
 
     job = Job.objects.filter(id=job_id)
@@ -320,9 +320,11 @@ def sbml_processing(self, job_id=None, make_consistent=False, *args, **kwargs):
         logger.info(f'Created {model_name}.nfile')
 
     except Exception as e:
-        logger.error(repr(e))
-        raise e
-
+        if settings.DEBUG:
+            logger.error(repr(e))
+            raise e
+        else:
+            raise Exception('There was an error writing out files.')
     # return biomass reaction for next task
     return bm_rxn
 
@@ -355,9 +357,9 @@ def compress_network(self, result, job_id, *args, **kwargs):
                                          '-l',
                                          '-k',
                                          ]
-    logger.info(f'Starting network compression script with the following arguments: {" ".join(cmd_args)}')
 
     if settings.DEBUG:
+        logger.info(f'Starting network compression script with the following arguments: {" ".join(cmd_args)}')
         subtask = SubTask.objects.filter(task_id=self.request.id)
         subtask.update(command_arguments=" ".join(cmd_args))
 
@@ -374,8 +376,8 @@ def compress_network(self, result, job_id, *args, **kwargs):
     except SoftTimeLimitExceeded as e:
         AbortableAsyncResult(self.request.id).abort()
         compress_process.kill()
-        raise RevokeChainRequested(repr(e))
-    except RevokeChainRequested as e:
+        raise ExecutionAbortedError(repr(e))
+    except ExecutionAbortedError as e:
         compress_process.kill()
         raise e
     except Exception as e:
@@ -388,7 +390,7 @@ def compress_network(self, result, job_id, *args, **kwargs):
     os.chdir(BASE_DIR)
 
     if compress_process.returncode:
-        raise RevokeChainRequested(f'Process {self.name} had non-zero exit status')
+        raise ExecutionAbortedError(f'Process {self.name} had non-zero exit status')
 
     return compress_process.returncode
 
@@ -450,7 +452,7 @@ def create_dual_system(self, result, job_id, *args, **kwargs):
     os.chdir(BASE_DIR)
 
     if create_dual_system_process.returncode:
-        raise RevokeChainRequested(f'Process {self.name} had non-zero exit status')
+        raise ExecutionAbortedError(f'Process {self.name} had non-zero exit status')
 
     return create_dual_system_process.returncode
 
@@ -469,7 +471,7 @@ def defigueiredo(self, result, job_id, cardinality, *args, **kwargs):
     t = 10
     comp_suffix = 'comp' if kwargs['do_compress'] else 'uncomp'
 
-    logger.info(f'Getting MCS: using up to d={dm} and t={t} thread(s)')
+    logger.info(f'Getting MCS: using up to d={dm} (cardinality) and t={t} thread(s)')
     os.chdir(path)
     cmd_args = [os.path.join(BASE_DIR, 'bin/defigueiredo'),
                                          '-m', f'{model_name}_{comp_suffix}_dual.mfile',
@@ -489,11 +491,10 @@ def defigueiredo(self, result, job_id, cardinality, *args, **kwargs):
     if settings.DEBUG:
         subtask = SubTask.objects.filter(task_id=self.request.id)
         subtask.update(command_arguments=" ".join(cmd_args))
+        logger.info(f'Starting {self.request.task} with the following arguments: {" ".join(cmd_args)}')
 
     # Start the process
     try:
-        logger.info(f'Starting {self.request.task} with the following arguments: {" ".join(cmd_args)}')
-
         defigueiredo_process = subprocess.Popen(cmd_args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
 
         update_meta_info(self, job_id, defigueiredo_process.pid)
@@ -512,22 +513,22 @@ def defigueiredo(self, result, job_id, cardinality, *args, **kwargs):
             AbortableAsyncResult(self.request.id).abort()
         except ProcessLookupError:
             pass
-        raise RevokeChainRequested(repr(e))
+        raise ExecutionAbortedError(repr(e))
 
-    except RevokeChainRequested as e:
+    except ExecutionAbortedError as e:
         defigueiredo_process.kill()
         raise e
 
     except Exception as e:
         logger.error(repr(e))
-        raise RevokeChainRequested(repr(e))
+        raise ExecutionAbortedError(repr(e))
 
     os.chdir(BASE_DIR)
 
     # one final check - sleep to let the other worker catch up
     time.sleep(2)
     if self.is_aborted():
-        raise RevokeChainRequested("Task aborted!")
+        raise ExecutionAbortedError("Task aborted!")
     time.sleep(1)
     return defigueiredo_process.returncode
 
@@ -663,6 +664,7 @@ def pofcalc(self, result, job_id, cardinality, *args, **kwargs):
         out = stout
         job = Job.objects.filter(id=job_id)
 
+        # extract the table with results from stdout
         for i in range(len(out)):
             if 'weight' in out[i]:
                 resulttable = out[i+2:i+2+cardinality]
@@ -685,7 +687,6 @@ def pofcalc(self, result, job_id, cardinality, *args, **kwargs):
                 pof_result = out[-1].split()[-1]
             job.update(result=pof_result)  # stores the string of the result
 
-        logger.info(f'Finished!')
         pofcalc_process.wait()
 
     except SoftTimeLimitExceeded as e:
@@ -695,7 +696,7 @@ def pofcalc(self, result, job_id, cardinality, *args, **kwargs):
             AbortableAsyncResult(self.request.id).abort()
         except ProcessLookupError:
             pass
-        raise RevokeChainRequested(repr(e))
+        raise ExecutionAbortedError(repr(e))
 
     except Exception as e:
         logger.error(repr(e))
@@ -704,7 +705,7 @@ def pofcalc(self, result, job_id, cardinality, *args, **kwargs):
     os.chdir(BASE_DIR)
 
     if pofcalc_process.returncode:
-        raise RevokeChainRequested(f'Process {self.name} had non-zero exit status')
+        raise ExecutionAbortedError(f'Process {self.name} had non-zero exit status')
     else:
         return float(pof_result) if pof_result else pofcalc_process.returncode
 

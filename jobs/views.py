@@ -255,9 +255,8 @@ class JobDetailView(LoginRequiredMixin, UserPassesTestMixin, DetailView):
         context = super().get_context_data(**kwargs)
         job = context['object']
         job_dict = model_to_dict(job)
-        job_dict['user'] = self.request.user
-        job_dict.pop('ip')
-        to_pop = []
+        to_pop = ['public_path', 'task_id_job', 'ip', 'sbml_file', 'user']
+
         context['rt'] = job_dict.pop('result_table')
         for k, v in job_dict.items():
             if v is None:
@@ -351,7 +350,8 @@ def download_results(request, type):
     Gathers all results and serves them as a downloadable csv/xl file
     """
     jobs = Job.objects.filter(user=request.user, is_finished=True, status='Done')
-    data = jobs.values('model_name', 'result', 'cardinality', 'compression', 'make_consistent', 'reactions',
+    data = jobs.values('model_name', 'result', 'cardinality_mcs', 'cardinality_pof',
+                       'compression', 'make_consistent', 'reactions',
                        'metabolites', 'genes', 'objective_expression', 'duration')
     df = pd.DataFrame.from_records(data)
 

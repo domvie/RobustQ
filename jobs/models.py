@@ -34,7 +34,7 @@ class Job(models.Model):
     finished_date = models.DateTimeField(blank=True, null=True)
     ip = models.GenericIPAddressField(null=True)
     compression = models.BooleanField(default=True)
-    cardinality_defigueiredo = models.IntegerField(default=2, verbose_name='Cardinality MCS')
+    cardinality_mcs = models.IntegerField(default=2, verbose_name='Cardinality MCS')
     cardinality_pof = models.IntegerField(default=10, verbose_name='Cardinality PoF')
     make_consistent = models.BooleanField(default=False)
     reactions = models.IntegerField(null=True)

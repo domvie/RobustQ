@@ -11,7 +11,7 @@ class JobSubmissionForm(forms.ModelForm):
     """Job submission form class. Details on how to render the form based on the Job model"""
     class Meta:
         model = Job
-        fields = ['sbml_file', 'compression', 'cardinality_defigueiredo', 'cardinality_pof', 'make_consistent']
+        fields = ['sbml_file', 'compression', 'cardinality_mcs', 'cardinality_pof', 'make_consistent']
 
     def __init__(self, *args, **kwargs):
         super(JobSubmissionForm, self).__init__(*args, **kwargs)
@@ -22,7 +22,7 @@ class JobSubmissionForm(forms.ModelForm):
                                                       'multiple': True,
                                                       'accept': '.' + ',.'.join(settings.ALLOWED_EXTENSIONS) + ', ' +
                                                                 ', '.join(settings.ALLOWED_CONTENT_TYPES)})
-        self.fields['cardinality_defigueiredo'].widget.attrs.update({'style': 'width: 3.5rem;',
+        self.fields['cardinality_mcs'].widget.attrs.update({'style': 'width: 3.5rem;',
                                                         'min': '1',
                                                         'max': '5',
                                                         'value': '2',

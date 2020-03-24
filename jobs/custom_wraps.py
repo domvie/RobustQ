@@ -10,7 +10,7 @@ from celery.exceptions import TimeLimitExceeded
 """custom revoke chain Exception"""
 
 
-class RevokeChainRequested(Exception):
+class ExecutionAbortedError(Exception):
     def __init__(self, return_value):
         Exception.__init__(self, "")
 
@@ -28,7 +28,7 @@ def revoke_chain_authority(a_shared_task):
         try:
             # 'begin second wrap
             return a_shared_task(self, *args, **kwargs)
-        except RevokeChainRequested as e:
+        except ExecutionAbortedError as e:
             # Drop subsequent tasks in chain (if not EAGER mode)
             # if self.request.callbacks:
             #     self.request.callbacks = None
