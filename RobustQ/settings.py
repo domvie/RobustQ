@@ -31,7 +31,7 @@ SECRET_KEY = 'r)it34y2v5bqdwjgl+ax@&(xk-_tq4w6ra&b&72=$ay2!o@u2k'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['127.0.0.1', 'localhost', '141.244.131.95']
 
 
 # Application definition
@@ -97,7 +97,7 @@ WSGI_APPLICATION = 'RobustQ.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'RobustQ',
+        'NAME': DB['NAME'],
         'USER': DB['USER'],
         'PASSWORD': DB['PW'],
         'HOST': '127.0.0.1',
@@ -155,10 +155,11 @@ STATIC_URL = '/static/'
 
 # TODO set to e.g. STATIC_ROOT = "/var/www/example.com/static/"
 # see https://docs.djangoproject.com/en/2.2/howto/static-files/
-#STATIC_ROOT = 'static/'
+STATIC_ROOT = '/home/dominic/Projects/RobustQ/static2/'
 
 STATICFILES_DIRS = [
     os.path.join(BASE_DIR, "static"),
+    # os.path.join(BASE_DIR, "static2"),
     # os.path.join(BASE_DIR, "uploads")
     # '/var/www/static/',
 ]

@@ -15,6 +15,7 @@ from django.conf import settings
 from celery.result import AsyncResult
 from django.utils import timezone
 from celery.contrib.abortable import AbortableAsyncResult
+import getpass
 
 
 """All signals connected to task execution are handled here, including celery worker signals
@@ -50,6 +51,8 @@ def start_job(sender, instance, created, **kwargs):
 
 #  these tasks are ignored by the signal handlers
 excluded_tasks = ['jobs.tasks.cleanup_expired_results', 'update_db', 'result_email', 'abort_task']
+if not settings.DEBUG:
+    excluded_tasks += ['execute_pipeline']
 
 
 @receiver(post_save, sender=TaskResult)
@@ -67,6 +70,12 @@ def add_task_info(sender, instance, created, **kwargs):
 def task_prerun_handler(sender=None, task_id=None, task=None, *args, **kwargs):
     """gets run before every task is executed by a worker. Mainly to set up logging for every
     individual task, define and save user paths and create the corresponding SubTask object"""
+    if settings.DEBUG:
+        username = getpass.getuser()
+        import grp
+        groups = [g.gr_name for g in grp.getgrall() if username in g.gr_mem]
+        print(username, ', '.join(groups))
+    
     if sender.name in excluded_tasks:
         return
 
@@ -93,11 +102,11 @@ def task_prerun_handler(sender=None, task_id=None, task=None, *args, **kwargs):
     fpath = job.sbml_file.path
     path = os.path.dirname(fpath)
     path_logs = os.path.join(path, 'logs')
-    public_logs = os.path.join(settings.STATICFILES_DIRS[0], 'logs')
+    # public_logs = os.path.join(settings.STATIC_ROOT, 'logs')
     if not os.path.exists(path_logs):
         os.mkdir(path_logs)
-    if not os.path.exists(public_logs):
-        os.mkdir(public_logs)
+    # if not os.path.exists(public_logs):
+    #     os.mkdir(public_logs)
 
     # Set up logging for each task individually
     logger = get_task_logger(task_id) #logging.getLogger(task_id)
@@ -110,40 +119,42 @@ def task_prerun_handler(sender=None, task_id=None, task=None, *args, **kwargs):
     stream_handler.setLevel(logging.INFO)
 
     # Adding File Handle with file path. Filename is task_id
-    task_handler = logging.FileHandler(os.path.join(path_logs, task.name+'.log'))
+    logfilepath = os.path.join(path_logs, task.name+'.log')
+    task_handler = logging.FileHandler(logfilepath)
     task_handler.setFormatter(formatter)
     task_handler.setLevel(logging.INFO)
 
     # Adding second File Handle with file path. Filename is task_id
-    if not job.public_path:
-        public_user_path = os.path.join(public_logs, os.path.relpath(path_logs))
-        job_qs.update(public_path=public_user_path)
-        if not os.path.exists(public_user_path):
-            os.makedirs(public_user_path)
-
-        user_task_logfile_path = os.path.join(public_user_path, task.name+'.log')
-    else:
-        user_task_logfile_path = os.path.join(job.public_path, task.name+'.log')
-    public_log_handler = logging.FileHandler(user_task_logfile_path)
-    public_log_handler.setFormatter(formatter)
-    public_log_handler.setLevel(logging.INFO)
+    # if not job.public_path:
+    #     public_user_path = os.path.join(public_logs, os.path.relpath(path_logs))
+    #     job_qs.update(public_path=public_user_path)
+    #     if not os.path.exists(public_user_path):
+    #         os.makedirs(public_user_path)
+    #
+    #     user_task_logfile_path = os.path.join(public_user_path, task.name+'.log')
+    # else:
+    #     user_task_logfile_path = os.path.join(job.public_path, task.name+'.log')
+    # public_log_handler = logging.FileHandler(user_task_logfile_path)
+    # public_log_handler.setFormatter(formatter)
+    # public_log_handler.setLevel(logging.INFO)
 
     logger.addHandler(stream_handler)
     logger.addHandler(task_handler)
-    logger.addHandler(public_log_handler)
-    logger.info(f'Starting task id {task_id} for task {task.name}')
+    # logger.addHandler(public_log_handler)
+    if settings.DEBUG:
+        logger.info(f'Starting task id {task_id} for task {task.name}')
 
-    SubTask.objects.create(job=job, user=job.user, task_id=task_id, name=task.name, logfile_path=user_task_logfile_path)
+    SubTask.objects.create(job=job, user=job.user, task_id=task_id, name=task.name, logfile_path=logfilepath) # user_task_logfile_path
 
 
 @task_postrun.connect
 def task_postrun_handler(sender, task_id, task, retval, state, *args,  **kwargs):
     """As the name suggests, fires after the task is finished by the worker. Log results, exc time,
     cleanup, update states"""
-    if sender.name in excluded_tasks:
-        return
-
-    print(f'{task_id} exited with status {state}')
+    # if sender.name in excluded_tasks:
+    #     return
+    if settings.DEBUG:
+        print(f'{task_id} exited with status {state}')
     try:
         cost = time() - timer.pop(task_id)
     except KeyError:
@@ -182,7 +193,7 @@ def task_failure_handler(sender=None, task_id=None, exception=None, *args, **kwa
     job.update(is_finished=True, duration=duration, finished_date=finished_date)
 
     logger = get_task_logger(task_id)
-    logger.error(f'Task {task_id} failed. Exception: {exception}')
+    logger.error(f'Task {task_id} failed: {exception}')
 
     cache.delete('running_job')
 
@@ -191,18 +202,21 @@ def task_failure_handler(sender=None, task_id=None, exception=None, *args, **kwa
 def worker_init(sender, instance, conf, options, **kwargs):
     """this removes the lock on the worker (currently useless)"""
     cache.delete('running_job')
+    if settings.DEBUG:
+        print(getpass.getuser())
 
 
 @task_revoked.connect(sender="execute_pipeline")
 def task_revoked_handler(request, terminated, signum, expired, *args, **kwargs):
     """fires when a task is revoked - i.e. when user it manually or the execution chain fails"""
     job_id = kwargs['job_id']
-    print('Task revoke handler: cancelling job ', job_id)
+    if settings.DEBUG:
+        print('Task revoke handler: cancelling job ', job_id)
     job = Job.objects.filter(id=job_id)
     job.update(status="Cancelled", is_finished=True)
     SubTask.objects.filter(task_id=request.id).update(status="Terminated")
     logger = get_task_logger(request.id)
-    logger.warning(f'Task {request.task} for job {job_id} has been flagged as revoked, with terminate={terminated}, '
+    logger.warning(f'Task {request.task} has been flagged as revoked, with terminate={terminated}, '
                    f'signal {signum}, expired: {expired}')
 
 

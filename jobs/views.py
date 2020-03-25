@@ -5,7 +5,7 @@ from .forms import JobSubmissionForm, JobTable
 from django.views.generic import CreateView, DetailView, ListView, DeleteView
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.views.generic.edit import FormMixin
-from .models import Job
+from .models import Job, SubTask
 from ipware import get_client_ip
 from django.forms.models import model_to_dict
 from django.http import HttpResponse, HttpResponseForbidden, JsonResponse, FileResponse, HttpResponseRedirect, \
@@ -271,7 +271,7 @@ class JobDetailView(LoginRequiredMixin, UserPassesTestMixin, DetailView):
         if subtasks:
             context['tasks'] = [model_to_dict(t) for t in subtasks]
             for d in context['tasks']:
-                d.pop('id')
+                # d.pop('id')
                 d.pop('user')
                 d.pop('job')
 
@@ -279,8 +279,6 @@ class JobDetailView(LoginRequiredMixin, UserPassesTestMixin, DetailView):
                 try:
                     with open(d['logfile_path'], 'r') as l:
                         d['logfile']['logdata'] = l.readlines()
-
-                    l.close()
 
                     d['logfile']['path'] = '/' + os.path.relpath(d.pop('logfile_path'))  # settings.STATIC_URL + os.path.join(fpath, f'logs/{d["name"]}.log')
 
@@ -336,7 +334,10 @@ def cancel_all_jobs(request):
     jobs_to_cancel = Job.objects.filter(user=request.user, is_finished=False)
     if jobs_to_cancel:
         for job in jobs_to_cancel:
-            revoke_job(job)
+            try:
+                revoke_job(job)
+            except:
+                pass
     return redirect('jobs')
 
 
@@ -358,7 +359,7 @@ def download_results(request, type):
 
     if type == 'csv':
         response = HttpResponse(content_type='text/csv')
-        response['Content-Disposition'] = 'attachment; filename=results.csv'
+        response['Content-Disposition'] = f'attachment; filename=RobustQ_results_all.csv'
 
         df.to_csv(path_or_buf=response, sep=';', float_format='%.2f', index=False, decimal=".")
     else:
@@ -381,17 +382,34 @@ def download_results(request, type):
 
 
 @login_required
+def serve_logfile(request, task_id):
+    """Returns: FileResponse
+    Serves a text/log file from a certain task"""
+    task = SubTask.objects.get(id=task_id)
+    if not request.user == task.job.user:
+        return HttpResponseForbidden
+    file = open(task.logfile_path, 'r')
+    return FileResponse(file)
+
+
+@login_required
 def download_job(request, pk):
     """Returns: FileResponse
     Serves a zip file with all logs/files from a job"""
     job = Job.objects.get(id=pk)
     if not request.user == job.user:
         return HttpResponseForbidden
-    filename = f'RobustQ_{pk}_{job.model_name}'
-    zipf = shutil.make_archive(filename, 'zip', os.path.dirname(job.sbml_file.path))
-    zipf_ = open(zipf, 'rb')
-    response = FileResponse(zipf_)
-    os.remove(zipf)
+    filename = f'RobustQ_{job.model_name}'
+    # zipf = shutil.make_archive(filename, 'zip', os.path.dirname(job.sbml_file.path))
+    # zipf_ = open(zipf, 'rb')
+    response = HttpResponse()
+    zipf_ = ZipFile(response, 'w')
+    path = os.path.dirname(job.sbml_file.path)
+    for root, dirs, files in os.walk(path):
+        for file in files:
+            zipf_.write(os.path.join(root, file), os.path.relpath(os.path.join(root, file), path))
+    zipf_.close()
+    response['Content-Disposition'] = 'attachment; filename={}'.format(filename)
     return response
 
 

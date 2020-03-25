@@ -39,7 +39,8 @@ urlpatterns = [
     path('uploadstream/<str:user>', job_views.uploadstream, name="uploadstream"),
     path('upload_progress/<str:uuid>', job_views.upload_progress, name="upload_progress"),
     path('cancel_jobs/', job_views.cancel_all_jobs, name="cancel_all_jobs"),
-    path('queue/', job_views.get_queue, name="queue")
+    path('queue/', job_views.get_queue, name="queue"),
+    path('jobs/logs/<int:task_id>', job_views.serve_logfile, name="serve_logfile")
 ]
 
 if settings.DEBUG:

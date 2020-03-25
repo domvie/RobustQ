@@ -24,13 +24,13 @@ class JobSubmissionForm(forms.ModelForm):
                                                                 ', '.join(settings.ALLOWED_CONTENT_TYPES)})
         self.fields['cardinality_mcs'].widget.attrs.update({'style': 'width: 3.5rem;',
                                                         'min': '1',
-                                                        'max': '5',
-                                                        'value': '2',
+                                                        'max': '6',
+                                                        'value': '3',
                                                         'step': '1'})
         self.fields['cardinality_pof'].widget.attrs.update({'style': 'width: 3.5rem;',
                                                                 'min': '1',
                                                                 'max': '20',
-                                                                'value': '10',
+                                                                'value': '8',
                                                                 'step': '1'})
 
 

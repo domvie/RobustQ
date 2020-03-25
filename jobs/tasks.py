@@ -30,7 +30,7 @@ import pandas as pd
 # TODO figure out pipeline stuff
 # TODO about/help page, footer etc.
 # TODO split this file up - pipeline tasks and this
-
+# TODO - No such file or directory tmp file error
 
 BASE_DIR = os.getcwd()
 
@@ -38,6 +38,11 @@ BASE_DIR = os.getcwd()
 def revoke_job(job):
     # terminate the running and all subsequent tasks of the job
     task_id_job = job.task_id_job
+    if not task_id_job:
+        # something went wrong
+        Job.objects.filter(id=job.id).update(status="Cancelled", is_finished=True)
+        return
+
     result = AbortableAsyncResult(task_id_job)
     # calling abort() and/or revoke() on this result will result in a cascade of revokes of uncompleted tasks
     # as in the execute_pipeline() task all chain tasks get called .revoke() on them
@@ -433,10 +438,10 @@ def create_dual_system(self, result, job_id, *args, **kwargs):
     if settings.DEBUG:
         subtask = SubTask.objects.filter(task_id=self.request.id)
         subtask.update(command_arguments=" ".join(cmd_args))
+        logger.info(f'Starting {self.request.task} with the following arguments: {" ".join(cmd_args)}')
 
     # Start the process
     try:
-        logger.info(f'Starting {self.request.task} with the following arguments: {" ".join(cmd_args)}')
 
         create_dual_system_process = subprocess.Popen(cmd_args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         cache.set("running_task_pid", create_dual_system_process.pid)
@@ -629,12 +634,10 @@ def pofcalc(self, result, job_id, cardinality, *args, **kwargs):
     if settings.DEBUG:
         subtask = SubTask.objects.filter(task_id=self.request.id)
         subtask.update(command_arguments=" ".join(cmd_args))
+        logger.info(f'Starting {self.request.task} with the following arguments: {" ".join(cmd_args)}')
 
     # Start the process
     try:
-        if settings.DEBUG:
-            logger.info(f'Starting {self.request.task} with the following arguments: {" ".join(cmd_args)}')
-
         pofcalc_process = subprocess.Popen(cmd_args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
 
         update_meta_info(self, job_id, pofcalc_process.pid)
@@ -776,7 +779,8 @@ def execute_pipeline(self, job_id, compression_checked, cardinality_defi,
             if parent.status == 'STARTED':
                 AbortableAsyncResult(parent.id).abort()
                 parent.revoke()
-                logger.warning(f'Cancelling current running task {parent.id}')
+                if settings.DEBUG:
+                    logger.warning(f'Cancelling current running task {parent.id}')
                 if job_id == cache.get('current_job'):
                     try:
                         os.kill(cache.get('running_task_pid'), signal.SIGTERM)

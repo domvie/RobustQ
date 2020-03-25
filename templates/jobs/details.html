@@ -58,7 +58,7 @@
                                 {% for key, value in job.items %}
                                     <tr class="row">
                                         {#                                <div class="d-sm-inline-flex flex-sm-row align-item-sm-center">#}
-                                        <td class="table-light col-sm-3"><b>{{ key|upper }}</b></td>
+                                        <td class="table-secondary col-sm-3"><b>{{ key|upper }}</b></td>
                                         <td class="table-light col-sm-9">{{ value }} </td>
                                         {#                                </div>#}
                                     </tr>
@@ -150,7 +150,7 @@
                                                                 <div class="modal-header">
                                                                     <h5 class="modal-title">
                                                                         Log data for {{ task.name }}</h5>
-                                                                    <a href="{{ task.logfile.path }}"
+                                                                    <a href="{% url 'serve_logfile' task.id %}"
                                                                        class="btn btn-sm btn-outline-secondary right ">Download</a>
 
                                                                 </div>
