@@ -148,6 +148,9 @@ def cleanup_expired_results():
             pass
     jobs.delete()
 
+    # sometimes jobs get "stuck"
+    Job.objects.filter(is_finished=True, status="Queued").update(status="Failed")
+
     # TODO delete taskresults?
 
 

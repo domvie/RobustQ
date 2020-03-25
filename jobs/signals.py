@@ -182,6 +182,7 @@ def task_failure_handler(sender=None, task_id=None, exception=None, *args, **kwa
     """if a task fails, try to log what happened"""
     task = SubTask.objects.filter(task_id=task_id).get()
     job = Job.objects.filter(id=task.job.id)
+    job.get().refresh_from_db()
     if job.get().status != 'Cancelled':
         job.update(status="Failed")
 
