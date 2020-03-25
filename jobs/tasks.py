@@ -381,7 +381,7 @@ def compress_network(self, result, job_id, *args, **kwargs):
     except SoftTimeLimitExceeded as e:
         AbortableAsyncResult(self.request.id).abort()
         compress_process.kill()
-        raise ExecutionAbortedError(repr(e))
+        raise e
     except ExecutionAbortedError as e:
         compress_process.kill()
         raise e
@@ -518,7 +518,7 @@ def defigueiredo(self, result, job_id, cardinality, *args, **kwargs):
             AbortableAsyncResult(self.request.id).abort()
         except ProcessLookupError:
             pass
-        raise ExecutionAbortedError(repr(e))
+        raise e
 
     except ExecutionAbortedError as e:
         defigueiredo_process.kill()
@@ -699,7 +699,7 @@ def pofcalc(self, result, job_id, cardinality, *args, **kwargs):
             AbortableAsyncResult(self.request.id).abort()
         except ProcessLookupError:
             pass
-        raise ExecutionAbortedError(repr(e))
+        raise e
 
     except Exception as e:
         logger.error(repr(e))
