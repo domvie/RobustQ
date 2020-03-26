@@ -159,6 +159,16 @@ class NewJobMixin(CreateView, FormMixin):
             # manually create a form object from each file in zip
             # file_dict is a MultiValueDict() which holds our file, copying a request.FILES-like object
             temp_form = JobSubmissionForm(request.POST, file_dict)
+
+            if temp_form.fields['skip_validation']:
+                # form = JobSubmissionForm(request.POST, request.FILES)
+                temp_form.is_valid()
+                temp_form.instance.user = request.user
+                temp_form._errors = {}
+                temp_form.save()
+                self.update_cache()
+                continue
+
             if temp_form.is_valid():  # if the 'form' is valid, save it as a new Job object, thus queueing it up
                 temp_form.instance.user = self.request.user
                 temp_form.save()
@@ -196,6 +206,15 @@ class NewJobMixin(CreateView, FormMixin):
             file_dict = MultiValueDict()
             file_dict['sbml_file'] = file
             temp_form = JobSubmissionForm(request.POST, file_dict)
+            if temp_form.fields['skip_validation']:
+                # form = JobSubmissionForm(request.POST, request.FILES)
+                temp_form.is_valid()
+                temp_form.instance.user = request.user
+                temp_form._errors = {}
+                temp_form.save()
+                self.update_cache()
+                continue
+
             if temp_form.is_valid():  # if the 'form' is valid, save it as a new Job object, thus queueing it up
                 temp_form.instance.user = self.request.user
                 temp_form.save()
