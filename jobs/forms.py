@@ -104,7 +104,7 @@ class JobTable(tables.Table):
 
     class Meta:
         model = Job
-        fields = ['id', 'status', 'sbml_file', 'start_date', 'compression', 'cardinality_defigueiredo',
+        fields = ['id', 'status', 'sbml_file', 'start_date', 'compression', 'cardinality_mcs',
                   'cardinality_pof', 'make_consistent', 'result', 'duration', 'details']
 
         attrs = {
