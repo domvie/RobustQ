@@ -167,6 +167,7 @@ class NewJobMixin(CreateView, FormMixin):
                 temp_form._errors = {}
                 temp_form.save()
                 self.update_cache()
+                any_form_valid = True
                 continue
 
             if temp_form.is_valid():  # if the 'form' is valid, save it as a new Job object, thus queueing it up
@@ -212,6 +213,7 @@ class NewJobMixin(CreateView, FormMixin):
                 temp_form.instance.user = request.user
                 temp_form._errors = {}
                 temp_form.save()
+                any_form_valid = True
                 self.update_cache()
                 continue
 
