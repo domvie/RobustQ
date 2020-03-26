@@ -240,6 +240,8 @@ def sbml_processing(self, job_id=None, make_consistent=False, *args, **kwargs):
         m = cobra.io.load_json_model(fpath)
     elif extension == '.xml' or extension == '.sbml':
         m = cobra.io.read_sbml_model(fpath)
+    elif extension == '.mat':
+        m = cobra.io.load_matlab_model(fpath)
     else:
         logger.error(f'ERROR: input file ({fname}) missing matching extension (.json/.xml/.sbml)')
         raise Exception(f'ERROR: input file ({fname}) missing matching extension (.json/.xml/.sbml)')
@@ -305,26 +307,22 @@ def sbml_processing(self, job_id=None, make_consistent=False, *args, **kwargs):
         # write mfile - metabolites
         with open(os.path.join(path, f'{model_name}.mfile'), 'w') as f:
             f.write(' '.join([met.id for met in m.metabolites]))
-        f.close()
         logger.info(f'Created {model_name}.mfile')
 
         # write rfile - reactions
         with open(os.path.join(path, f'{model_name}.rfile'), 'w') as f:
             f.write(' '.join([rxn.id for rxn in m.reactions]))
-        f.close()
         logger.info(f'Created {model_name}.rfile')
 
         # write rvfile - reversible reactions
         with open(os.path.join(path, f'{model_name}.rvfile'), 'w') as f:
             f.write(' '.join(['1' if rxn.reversibility \
                                   else '0' for rxn in m.reactions]))
-        f.close()
         logger.info(f'Created {model_name}.rvfile')
 
         # write nfile - biomass reaction
         with open(os.path.join(path, f'{model_name}.nfile'), 'w') as f:
             f.write(bm_rxn)
-        f.close()
         logger.info(f'Created {model_name}.nfile')
 
     except Exception as e:
