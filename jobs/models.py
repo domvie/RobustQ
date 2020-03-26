@@ -52,6 +52,7 @@ class Job(models.Model):
                                  validators=[FileExtensionValidator(allowed_extensions=settings.ALLOWED_EXTENSIONS,
                                                                     message='Wrong file type!'), sbml_validator],
                                  verbose_name='File', max_upload_size=settings.MAX_UPLOAD_SIZE)
+    skip_validation = models.BooleanField(default=False)
 
     def get_absolute_url(self):
         return reverse('details', kwargs={'pk': self.pk})  # returns to e.g. jobs//details/1

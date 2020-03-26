@@ -79,6 +79,7 @@ class NewJobMixin(CreateView, FormMixin):
         context['max_upload'] = filesizeformat(settings.MAX_UPLOAD_SIZE)
         context['allowed_ext'] = ',.'.join(settings.ALLOWED_EXTENSIONS)
         context['timelimit'] = (settings.CELERY_TASK_TIME_LIMIT)/3600
+        context['debug'] = settings.DEBUG
         return context
 
     # Overriding the post method
@@ -94,6 +95,16 @@ class NewJobMixin(CreateView, FormMixin):
         filename, ext = os.path.splitext(file.name)
         if ext == '.zip':
             return self.zip_file_handler(request, file)
+
+        if JobSubmissionForm(request.POST).fields['skip_validation']:
+            form = JobSubmissionForm(request.POST, request.FILES)
+            form.is_valid()
+            form.instance.user = request.user
+            form._errors = {}
+            form.save()
+
+            return HttpResponseRedirect(self.get_success_url())
+
         else:
             return super().post(self, request, *args, **kwargs)
 

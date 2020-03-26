@@ -253,16 +253,21 @@ def sbml_processing(self, job_id=None, make_consistent=False, *args, **kwargs):
     genes = len(m.genes)
 
     # Get Biomass reaction
-    # bm_rxn = m.objective.expression  # doesnt return pure id
+    if not m.objective.expression:
+        # no objective expression set - true for bad SBML models, often .mat models lack this as well - manually add it
+        for rxn in m.reactions:
+            if ('BIOMASS' and 'OBJ') in rxn.name.upper():
+                m.objective = rxn
     exp_list = list(cobra.util.solver.linear_reaction_coefficients(m))
     if len(exp_list) > 1:
         logger.warning(f'Multiple objective expression functions found. We will try to infer the biomass reaction from '
                        f'this list. Other reactions may be removed by compression if you chose to compress.')
         for rxn in exp_list:
-            if ("BIOMASS" or "biomass") in rxn.id:
+            if ("BIOMASS") in rxn.id.upper():
                 bm_rxn = rxn.id
     else:
         bm_rxn = exp_list[0].id
+
     logger.info(f'Biomass reaction was found to be {bm_rxn}')
 
     job = Job.objects.filter(id=job_id)

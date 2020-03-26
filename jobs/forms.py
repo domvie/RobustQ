@@ -11,7 +11,8 @@ class JobSubmissionForm(forms.ModelForm):
     """Job submission form class. Details on how to render the form based on the Job model"""
     class Meta:
         model = Job
-        fields = ['sbml_file', 'compression', 'cardinality_mcs', 'cardinality_pof', 'make_consistent']
+        fields = ['sbml_file', 'compression', 'cardinality_mcs', 'cardinality_pof', 'make_consistent',
+                  'skip_validation']
 
     def __init__(self, *args, **kwargs):
         super(JobSubmissionForm, self).__init__(*args, **kwargs)

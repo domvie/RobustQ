@@ -5,10 +5,6 @@ from django.core.files.uploadedfile import InMemoryUploadedFile
 import cobra
 
 
-# def filesize_validator(value):
-#     """ makes sure the uploaded file doesnt exceed the maximum filesize"""
-
-
 def sbml_validator(value):
     """
     Validates the uploaded SBML/XML file using the libSBML library
@@ -19,12 +15,10 @@ def sbml_validator(value):
     try:
         reader = libsbml.SBMLReader()
         if isinstance(value, FileField):
-            print('1, FileField, value.name=', value.name)
             document = reader.readSBML(value.name)
             cobraval = cobra.io.validate_sbml_model(value.name)
         elif isinstance(value, FieldFile):
             if isinstance(value.file, InMemoryUploadedFile):
-                print(f'InMemory, value.name = {value.name}, value.file = {value.file}')
                 # if the uploaded file size is smaller than ~2.5MB, Django saves the file in memory
                 document = reader.readSBML(value.name)
                 # 2nd validation with cobra
@@ -37,7 +31,6 @@ def sbml_validator(value):
                 cobraval = cobra.io.validate_sbml_model(value.file.temporary_file_path())
 
         else:
-            print(type(value))
             document = reader.readSBML(value.name)
             cobraval = cobra.io.validate_sbml_model(value.name)
 
@@ -59,11 +52,6 @@ def sbml_validator(value):
                                   params={'error':cobraval[1]['SBML_ERROR'], 'line': '?'})
 
         return value
-    # except TypeError as te:
-    #     print(te.args)
-    #     return value
     except Exception as e:
-        # import ipdb
-        # ipdb.set_trace()
         raise ValidationError(message=e.args[0], code='sbml_validation_exception',
                               params={'error':e.args[0], 'line': '?'})

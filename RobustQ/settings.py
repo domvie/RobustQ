@@ -193,7 +193,7 @@ EMAIL_HOST_PASSWORD = DB['EMAILP']
 
 MEDIA_ROOT = os.path.join(BASE_DIR, 'uploads')
 MEDIA_URL = '/uploads/'
-ALLOWED_EXTENSIONS = ['xml', 'json', 'zip']
+ALLOWED_EXTENSIONS = ['xml', 'json', 'zip', 'mat']
 ALLOWED_CONTENT_TYPES = ['text/xml', 'application/json', 'application/zip']
 
 
@@ -220,3 +220,8 @@ MAX_UPLOAD_SIZE = 15728640  # 15MB
 FILE_UPLOAD_MAX_MEMORY_SIZE = 0
 
 DAYS_UNTIL_JOB_DELETE = 14
+
+# SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+# SECURE_SSL_REDIRECT = True
+# SESSION_COOKIE_SECURE = True
+# CSRF_COOKIE_SECURE = True
