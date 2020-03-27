@@ -16,7 +16,7 @@ from celery.result import AsyncResult
 from django.utils import timezone
 from celery.contrib.abortable import AbortableAsyncResult
 import getpass
-
+import shutil
 
 """All signals connected to task execution are handled here, including celery worker signals
 """
@@ -244,3 +244,5 @@ def pre_delete_handler(sender, instance, using, *args, **kwargs):
             revoke_job(instance)
         except ValueError:  # when AsyncResult does not get valid id
             pass
+    # also delete folders with data
+    shutil.rmtree(os.path.dirname(instance.sbml_file.path), ignore_errors=True)
