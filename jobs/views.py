@@ -96,7 +96,7 @@ class NewJobMixin(CreateView, FormMixin):
         if ext == '.zip':
             return self.zip_file_handler(request, file)
 
-        if JobSubmissionForm(request.POST).fields['skip_validation']:
+        if JobSubmissionForm(request.POST).data.get('skip_validation', None) == 'on':
             form = JobSubmissionForm(request.POST, request.FILES)
             form.is_valid()
             form.instance.user = request.user
@@ -431,7 +431,7 @@ def download_job(request, pk):
     job = Job.objects.get(id=pk)
     if not request.user == job.user:
         return HttpResponseForbidden
-    filename = f'RobustQ_{job.model_name}'
+    filename = f'RobustQ_{job.model_name}.zip'
     # zipf = shutil.make_archive(filename, 'zip', os.path.dirname(job.sbml_file.path))
     # zipf_ = open(zipf, 'rb')
     response = HttpResponse()
