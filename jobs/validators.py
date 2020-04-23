@@ -3,6 +3,7 @@ import libsbml
 from django.db.models.fields.files import FieldFile, FileField
 from django.core.files.uploadedfile import InMemoryUploadedFile
 import cobra
+import os
 
 
 def sbml_validator(value):
@@ -11,7 +12,8 @@ def sbml_validator(value):
     :param value: FileField/FieldFile object
     :return: FileField object or ValidationError
     """
-    # TODO implement cobra variant?
+    if os.path.splitext(value.name)[1] == '.json':  # no support for JSON validation!
+        return
     try:
         reader = libsbml.SBMLReader()
         if isinstance(value, FileField):

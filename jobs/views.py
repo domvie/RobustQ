@@ -82,7 +82,6 @@ class NewJobMixin(CreateView, FormMixin):
         context['debug'] = settings.DEBUG
         return context
 
-    # Overriding the post method
     def post(self, request, *args, **kwargs):
         file = request.FILES['sbml_file']
         self.progress_id = file.progress_id
