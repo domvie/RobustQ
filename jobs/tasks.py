@@ -694,6 +694,8 @@ def pofcalc(self, result, job_id, cardinality, *args, **kwargs):
                 pof_result = round(float(out[-1].split()[-1]), 4)
             except ValueError:
                 pof_result = out[-1].split()[-1]
+                if pof_result == 'nan':
+                    pof_result = '1'
             job.update(result=pof_result)  # stores the string of the result
 
         pofcalc_process.wait()
