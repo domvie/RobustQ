@@ -70,12 +70,7 @@ def add_task_info(sender, instance, created, **kwargs):
 def task_prerun_handler(sender=None, task_id=None, task=None, *args, **kwargs):
     """gets run before every task is executed by a worker. Mainly to set up logging for every
     individual task, define and save user paths and create the corresponding SubTask object"""
-    if settings.DEBUG:
-        username = getpass.getuser()
-        import grp
-        groups = [g.gr_name for g in grp.getgrall() if username in g.gr_mem]
-        print(username, ', '.join(groups))
-    
+
     if sender.name in excluded_tasks:
         return
 
