@@ -18,23 +18,23 @@ def sbml_validator(value):
         reader = libsbml.SBMLReader()
         if isinstance(value, FileField):
             document = reader.readSBML(value.name)
-            cobraval = cobra.io.validate_sbml_model(value.name)
+            # cobraval = cobra.io.validate_sbml_model(value.name)
         elif isinstance(value, FieldFile):
             if isinstance(value.file, InMemoryUploadedFile):
                 # if the uploaded file size is smaller than ~2.5MB, Django saves the file in memory
                 document = reader.readSBML(value.name)
                 # 2nd validation with cobra
-                cobraval = cobra.io.validate_sbml_model(value.name)
+                # cobraval = cobra.io.validate_sbml_model(value.name)
 
             else:
                 # file size > 2.5MB: file not saved in memory but at a temporary upload path
                 document = reader.readSBML(value.file.temporary_file_path())
                 # 2nd validation with cobra
-                cobraval = cobra.io.validate_sbml_model(value.file.temporary_file_path())
+                # cobraval = cobra.io.validate_sbml_model(value.file.temporary_file_path())
 
         else:
             document = reader.readSBML(value.name)
-            cobraval = cobra.io.validate_sbml_model(value.name)
+            # cobraval = cobra.io.validate_sbml_model(value.name)
 
         nr_errors = document.getNumErrors()
         if nr_errors:
@@ -48,10 +48,10 @@ def sbml_validator(value):
                 errors.append(f'{category}/line {line}: {msg}')
             raise ValidationError(message=errors, code='sbml_file_error', params={'error': msg, 'line': line})
 
-        # cobra validation
-        if cobraval[0] is None:
-            raise ValidationError(message=cobraval[1]['COBRA_FATAL'], code='sbml_file_error',
-                                  params={'error':cobraval[1]['SBML_ERROR'], 'line': '?'})
+        # # cobra validation
+        # if cobraval[0] is None:
+        #     raise ValidationError(message=cobraval[1]['COBRA_FATAL'], code='sbml_file_error',
+        #                           params={'error':cobraval[1]['SBML_ERROR'], 'line': '?'})
 
         return value
     except Exception as e:

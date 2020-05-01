@@ -168,14 +168,17 @@ class NewJobMixin(CreateView, FormMixin):
                 self.update_cache()
                 any_form_valid = True
                 continue
-
-            if temp_form.is_valid():  # if the 'form' is valid, save it as a new Job object, thus queueing it up
-                temp_form.instance.user = self.request.user
-                temp_form.save()
-                any_form_valid = True
-            else:
+            try:
+                if temp_form.is_valid():  # if the 'form' is valid, save it as a new Job object, thus queueing it up
+                    temp_form.instance.user = self.request.user
+                    temp_form.save()
+                    any_form_valid = True
+                else:
+                    failed_files.append(temp_file_handler.file.name)
+            except:
                 failed_files.append(temp_file_handler.file.name)
             self.update_cache()
+
         myzip.close()
 
         if failed_files:
@@ -215,12 +218,14 @@ class NewJobMixin(CreateView, FormMixin):
                 any_form_valid = True
                 self.update_cache()
                 continue
-
-            if temp_form.is_valid():  # if the 'form' is valid, save it as a new Job object, thus queueing it up
-                temp_form.instance.user = self.request.user
-                temp_form.save()
-                any_form_valid = True
-            else:
+            try:
+                if temp_form.is_valid():  # if the 'form' is valid, save it as a new Job object, thus queueing it up
+                    temp_form.instance.user = self.request.user
+                    temp_form.save()
+                    any_form_valid = True
+                else:
+                    failed_files.append(file.name)
+            except:
                 failed_files.append(file.name)
             self.update_cache()
 
