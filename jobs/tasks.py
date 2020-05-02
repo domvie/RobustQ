@@ -259,13 +259,19 @@ def sbml_processing(self, job_id=None, make_consistent=False, *args, **kwargs):
                 m.objective = rxn
     exp_list = list(cobra.util.solver.linear_reaction_coefficients(m))
     if len(exp_list) > 1:
-        logger.warning(f'Multiple objective expression functions found. We will try to infer the biomass reaction from '
-                       f'this list. Other reactions may be removed by compression if you chose to compress.')
+        # logger.warning(f'Multiple objective expression functions found. We will try to infer the biomass reaction from '
+        #                f'this list. Other reactions may be removed by compression if you chose to compress.')
         for rxn in exp_list:
             if ("BIOMASS") in rxn.id.upper():
                 bm_rxn = rxn.id
     else:
-        bm_rxn = exp_list[0].id
+        try:
+            bm_rxn = exp_list[0].id
+        except:
+            logger.error("Sorry, we could not determine any objective function for this model. Please make sure the "
+                         "model has an objective expression reaction set, otherwise we cannot determine the probability "
+                         "of failure!")
+            raise Exception("Could not find objective expression reaction")
 
     logger.info(f'Biomass reaction was found to be {bm_rxn}')
 
