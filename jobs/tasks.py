@@ -306,6 +306,11 @@ def sbml_processing(self, job_id=None, make_consistent=False, *args, **kwargs):
     else:
         job.update(reactions=reactions, metabolites=metabolites, genes=genes, objective_expression=bm_rxn)
 
+    try:
+        medium = m.medium
+
+        logger.info(f'Medium: {medium}')
+
     # Extract info from model and write to respective files
     try:
         # write sfile - stoichiometric matrix
