@@ -310,6 +310,8 @@ def sbml_processing(self, job_id=None, make_consistent=False, *args, **kwargs):
         medium = m.medium
 
         logger.info(f'Medium: {medium}')
+    except:
+        pass
 
     # Extract info from model and write to respective files
     try:
