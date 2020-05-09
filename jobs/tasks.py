@@ -332,15 +332,35 @@ def sbml_processing(self, job_id=None, make_consistent=False, *args, **kwargs):
             tempmed = {}
             for rxn in m.reactions:
                 if 'ex_' in rxn.id.lower():
-                    tempmed[rxn.id] = 1000
+                    rxn.lower_bound = -10
+                    rxn.upper_bound = 1000
+                    tempmed[rxn.id] = 5
 
             if tempmed:
-                logger.info(f'Found possible mediums, automatically setting them as the growth medium.')
+                logger.info(f'Found possible mediums, trying to set them automatically however we can not guarantee '
+                            f'this to work! Ideally, modify your model to correctly identify exchange reactions and '
+                            f'the growth medium. \n Possible mediums/exchange reactions found: {tempmed}')
                 m.medium = tempmed
+                if not m.medium:
+                    logger.warning('Unfortunately, we could not set the medium ourselves.')
             else:
                 logger.warning('No medium could be found!')
 
         logger.info(f'Medium: {medium}')
+        logger.info(f'Exchanges: {m.exchanges}')
+        logger.info(f'Demands: {m.demands}')
+        logger.info(f'Sinks: {m.sinks}')
+
+        try:
+            fba_solution = m.optimize()
+
+            logger.info(f'Under given circumstances, FBA simulation by COBRA yields the following objective solution: '
+                        f'{fba_solution.objective_value} with status {fba_solution.status}')
+            logger.info(f'{m.summary()}')
+        except:
+            logger.warning(f'Could not run FBA simulation with COBRA, your model may be infeasible for the objective '
+                           f'reaction {bm_rxn}')
+
     except:
         pass
 
