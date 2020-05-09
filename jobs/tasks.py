@@ -227,6 +227,8 @@ def sbml_processing(self, job_id=None, make_consistent=False, *args, **kwargs):
     """First task in the workflow. Extracts info from the SBML file and if specified,
     tries to make model consistent. Writes info to files and returns the objective biomass rxn"""
     import cobra
+    import re
+
 
     logger, fpath, path, fname, model_name, extension = setup_process(self, job_id=job_id, result=None, *args, **kwargs)
 
@@ -253,27 +255,44 @@ def sbml_processing(self, job_id=None, make_consistent=False, *args, **kwargs):
 
     # Get Biomass reaction
     if not m.objective.expression:
-        # no objective expression set - true for bad SBML models, often .mat models lack this as well - manually add it
+        # no objective expression set - true for bad SBML models, often .mat models lack this as well - manually try
+        # to determine it
+        logger.warning('No objective expression function set. We will try to infer one..')
         for rxn in m.reactions:
-            if ('BIOMASS' and 'OBJ') in rxn.name.upper():
+            if 'BIOMASS' in rxn.name.upper():
                 m.objective = rxn
+                logger.info(f'Found possible objective function reaction: {rxn.name}, {rxn.id}, {rxn}')
+                break
+            elif 'OBJ' in rxn.name.upper():
+                m.objective = rxn
+                logger.info(f'Found possible objective function reaction: {rxn.name}, {rxn.id}, {rxn}')
+            elif 'GROW' in rxn.name.upper():
+                m.objective = rxn
+                logger.info(f'Found possible objective function reaction: {rxn.name}, {rxn.id}, {rxn}')
+
+        if not m.objective:
+            m.objective = m.reactions.query(re.compile(r'biomass', flags=re.IGNORECASE)) or \
+                          m.reactions.query(re.compile(r'bio', flags=re.IGNORECASE)) or \
+                          m.reactions.query(re.compile(r'obj', flags=re.IGNORECASE))
+
     exp_list = list(cobra.util.solver.linear_reaction_coefficients(m))
     if len(exp_list) > 1:
-        # logger.warning(f'Multiple objective expression functions found. We will try to infer the biomass reaction from '
-        #                f'this list. Other reactions may be removed by compression if you chose to compress.')
+        logger.warning(f'Multiple objective expression functions found. We will try to infer the biomass reaction from '
+                       f'this list.')
         for rxn in exp_list:
-            if ("BIOMASS") in rxn.id.upper():
+            if ("BIOMASS" or "BIO" or "OBJ" or "GROW") in rxn.id.upper():
                 bm_rxn = rxn.id
     else:
         try:
             bm_rxn = exp_list[0].id
         except:
             logger.error("Sorry, we could not determine any objective function for this model. Please make sure the "
-                         "model has an objective expression reaction set, otherwise we cannot determine the probability "
-                         "of failure!")
+                         "model has an objective expression reaction set, otherwise we cannot determine the probability"
+                         " of failure!")
             raise Exception("Could not find objective expression reaction")
 
     logger.info(f'Biomass reaction was found to be {bm_rxn}')
+    logger.info(f'Expression: {m.objective.expression}')
 
     job = Job.objects.filter(id=job_id)
 
@@ -308,6 +327,18 @@ def sbml_processing(self, job_id=None, make_consistent=False, *args, **kwargs):
 
     try:
         medium = m.medium
+        if not medium:
+            logger.warning('No growth medium set. Trying to infer..')
+            tempmed = {}
+            for rxn in m.reactions:
+                if 'ex_' in rxn.id.lower():
+                    tempmed[rxn.id] = 1000
+
+            if tempmed:
+                logger.info(f'Found possible mediums, automatically setting them as the growth medium.')
+                m.medium = tempmed
+            else:
+                logger.warning('No medium could be found!')
 
         logger.info(f'Medium: {medium}')
     except:
