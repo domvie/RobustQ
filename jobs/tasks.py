@@ -347,19 +347,21 @@ def sbml_processing(self, job_id=None, make_consistent=False, *args, **kwargs):
                 logger.warning('No medium could be found!')
 
         logger.info(f'Medium: {medium}')
-        logger.info(f'Exchanges: {m.exchanges}')
-        logger.info(f'Demands: {m.demands}')
-        logger.info(f'Sinks: {m.sinks}')
 
         try:
             fba_solution = m.optimize()
 
             logger.info(f'Under given circumstances, FBA simulation by COBRA yields the following objective solution: '
-                        f'{fba_solution.objective_value} with status {fba_solution.status}')
-            logger.info(f'{m.summary()}')
+                        f'{fba_solution.objective_value} with status "{fba_solution.status}"')
+            logger.info(f'\n{m.summary(float_format=None)}')
         except:
             logger.warning(f'Could not run FBA simulation with COBRA, your model may be infeasible for the objective '
                            f'reaction {bm_rxn}')
+
+        logger.info(f'Exchanges: {m.exchanges}')
+        logger.info(f'Demands: {m.demands}')
+        logger.info(f'Sinks: {m.sinks}')
+
 
     except:
         pass
@@ -370,28 +372,28 @@ def sbml_processing(self, job_id=None, make_consistent=False, *args, **kwargs):
         np.savetxt(os.path.join(path, f'{model_name}.sfile'),
                    cobra.util.array.create_stoichiometric_matrix(m),
                    delimiter='\t', fmt='%g')
-        logger.info(f'Created {model_name}.sfile')
+        logger.info(f'Created {model_name}.sfile (soichiometric matrix)')
 
         # write mfile - metabolites
         with open(os.path.join(path, f'{model_name}.mfile'), 'w') as f:
             f.write(' '.join([met.id for met in m.metabolites]))
-        logger.info(f'Created {model_name}.mfile')
+        logger.info(f'Created {model_name}.mfile (metabolites)')
 
         # write rfile - reactions
         with open(os.path.join(path, f'{model_name}.rfile'), 'w') as f:
             f.write(' '.join([rxn.id for rxn in m.reactions]))
-        logger.info(f'Created {model_name}.rfile')
+        logger.info(f'Created {model_name}.rfile (reactions)')
 
         # write rvfile - reversible reactions
         with open(os.path.join(path, f'{model_name}.rvfile'), 'w') as f:
             f.write(' '.join(['1' if rxn.reversibility \
                                   else '0' for rxn in m.reactions]))
-        logger.info(f'Created {model_name}.rvfile')
+        logger.info(f'Created {model_name}.rvfile (reversible reactions)')
 
         # write nfile - biomass reaction
         with open(os.path.join(path, f'{model_name}.nfile'), 'w') as f:
             f.write(bm_rxn)
-        logger.info(f'Created {model_name}.nfile')
+        logger.info(f'Created {model_name}.nfile (objective function)')
 
     except Exception as e:
         if settings.DEBUG:
