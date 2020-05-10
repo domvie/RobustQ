@@ -270,7 +270,7 @@ def sbml_processing(self, job_id=None, make_consistent=False, *args, **kwargs):
                 m.objective = rxn
                 logger.info(f'Found possible objective function reaction: {rxn.name}, {rxn.id}, {rxn}')
 
-        if not m.objective:
+        if not m.objective.expression:
             m.objective = m.reactions.query(re.compile(r'biomass', flags=re.IGNORECASE)) or \
                           m.reactions.query(re.compile(r'bio', flags=re.IGNORECASE)) or \
                           m.reactions.query(re.compile(r'obj', flags=re.IGNORECASE))
