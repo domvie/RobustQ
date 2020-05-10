@@ -9,6 +9,7 @@ from django_celery_results.models import TaskResult
 from .formatChecker import ContentTypeRestrictedFileField
 from django.conf import settings
 import os
+import random
 
 """defines Django database models"""
 
@@ -17,8 +18,9 @@ def user_directory_path(instance, filename):
     # file will be uploaded to MEDIA_ROOT/<user_id>/<filename>
     user = instance.user.username
     date = datetime.datetime.now().strftime('%d%m%y_%H%M%S')
+    i = random.randint(a=10, b=99)
     fname_noext = os.path.splitext(filename)[0][:10] # max 10 characters
-    return '{0}_{1}/{2}_{3}/{4}'.format(instance.user.id, user, fname_noext, date, filename)
+    return '{0}_{1}/{2}_{3}{4}/{5}'.format(instance.user.id, user, fname_noext, date, i, filename)
 
 
 def givemetimezone():
