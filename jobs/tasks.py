@@ -358,9 +358,9 @@ def sbml_processing(self, job_id=None, make_consistent=False, *args, **kwargs):
             logger.warning(f'Could not run FBA simulation with COBRA, your model may be infeasible for the objective '
                            f'reaction {bm_rxn}')
 
-        logger.info(f'Exchanges: {m.exchanges}')
-        logger.info(f'Demands: {m.demands}')
-        logger.info(f'Sinks: {m.sinks}')
+        logger.info(f'Exchanges: {[(rxn.id, rxn.name) for rxn in m.exchanges]}')
+        logger.info(f'Demands: {[(rxn.id, rxn.name) for rxn in m.demands]}')
+        logger.info(f'Sinks: {[(rxn.id, rxn.name) for rxn in m.sinks]}')
 
 
     except:
