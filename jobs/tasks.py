@@ -282,9 +282,11 @@ def sbml_processing(self, job_id=None, make_consistent=False, *args, **kwargs):
         for rxn in exp_list:
             if ("BIOMASS" or "BIO" or "OBJ" or "GROW") in rxn.id.upper():
                 bm_rxn = rxn.id
+                rxn.lower_bound = 0
     else:
         try:
             bm_rxn = exp_list[0].id
+            exp_list[0].lower_bound = 0
         except:
             logger.error("Sorry, we could not determine any objective function for this model. Please make sure the "
                          "model has an objective expression reaction set, otherwise we cannot determine the probability"
