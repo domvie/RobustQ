@@ -387,10 +387,10 @@ def download_results(request, type):
     Returns: HttpResponse for file download
     Gathers all results and serves them as a downloadable csv/xl file
     """
-    jobs = Job.objects.filter(user=request.user, is_finished=True, status='Done')
+    jobs = Job.objects.all() # filter(user=request.user, is_finished=True, status='Done') #TODO undo
     data = jobs.values('model_name', 'result', 'cardinality_mcs', 'cardinality_pof',
                        'compression', 'make_consistent', 'reactions',
-                       'metabolites', 'genes', 'objective_expression', 'duration')
+                       'metabolites', 'genes', 'objective_expression', 'duration', 'status')
     df = pd.DataFrame.from_records(data)
 
     if type == 'csv':
