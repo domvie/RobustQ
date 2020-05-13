@@ -412,7 +412,7 @@ def download_results(request, type):
         # set the mime type so that the browser knows what to do with the file
         response = HttpResponse(xlfile.read(),
                                 content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-        response['Content-Disposition'] = 'attachment; filename=results.xslx'
+        response['Content-Disposition'] = 'attachment; filename=results.xlsx'
 
     return response
 
