@@ -546,7 +546,7 @@ def defigueiredo(self, result, job_id, cardinality, *args, **kwargs):
 
     dm = cardinality
     # threads - parameter?
-    t = 10
+    t = 17 # TODO adjust when necessary
     comp_suffix = 'comp' if kwargs['do_compress'] else 'uncomp'
 
     logger.info(f'Getting MCS: using up to d={dm} (cardinality) and t={t} thread(s)')
@@ -636,7 +636,7 @@ def mcs_to_binary(self, result, job_id, *args, **kwargs):
                 open(os.path.join(path, output_file), 'w') as outfile:
             mcs_list = mcsfile.readlines()
             mcs_set = set(mcs_list)
-            for line in mcs_set:  # TODO "FIX" - removes duplicate MCS from binary MCS file
+            for line in mcs_set:
                 arr = ['0'] * len(rxns)
                 sep = ' ' if ' ' in line else ','
                 mcs = line.strip().split(sep)
@@ -671,7 +671,7 @@ def pofcalc(self, result, job_id, cardinality, *args, **kwargs):
 
     os.chdir(path)
     d = cardinality
-    t = 10
+    t = 17
     comp_suffix = 'comp' if kwargs['do_compress'] else 'uncomp'
 
     logger.info(f'Calculating PoF up to d={d}')
