@@ -79,6 +79,7 @@ class NewJobMixin(CreateView, FormMixin):
         context['max_upload'] = filesizeformat(settings.MAX_UPLOAD_SIZE)
         context['allowed_ext'] = ',.'.join(settings.ALLOWED_EXTENSIONS)
         context['timelimit'] = (settings.CELERY_TASK_TIME_LIMIT)/3600
+        context['days_deleted'] = settings.DAYS_UNTIL_JOB_DELETE
         context['debug'] = settings.DEBUG
         return context
 
