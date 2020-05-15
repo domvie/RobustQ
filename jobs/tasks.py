@@ -546,7 +546,7 @@ def defigueiredo(self, result, job_id, cardinality, *args, **kwargs):
 
     dm = cardinality
     # threads - parameter?
-    t = 12 # TODO adjust when necessary
+    t = 10 # TODO adjust when necessary
     comp_suffix = 'comp' if kwargs['do_compress'] else 'uncomp'
 
     logger.info(f'Getting MCS: using up to d={dm} (cardinality) and t={t} thread(s)')
@@ -671,7 +671,7 @@ def pofcalc(self, result, job_id, cardinality, *args, **kwargs):
 
     os.chdir(path)
     d = cardinality
-    t = 12
+    t = 10
     comp_suffix = 'comp' if kwargs['do_compress'] else 'uncomp'
 
     logger.info(f'Calculating PoF up to d={d}')
