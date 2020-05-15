@@ -387,7 +387,7 @@ def download_results(request, type):
     Returns: HttpResponse for file download
     Gathers all results and serves them as a downloadable csv/xl file
     """
-    jobs = Job.objects.all() # filter(user=request.user, is_finished=True, status='Done') #TODO undo
+    jobs = Job.objects.filter(user=request.user, is_finished=True, status='Done')
     data = jobs.values('model_name', 'result', 'cardinality_mcs', 'cardinality_pof',
                        'compression', 'make_consistent', 'reactions',
                        'metabolites', 'genes', 'objective_expression', 'duration', 'status')
