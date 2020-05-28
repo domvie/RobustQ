@@ -137,7 +137,8 @@ class NewJobMixin(CreateView, FormMixin):
 
         for model in filelist:
             model_name, ext = os.path.splitext(model)
-            if ext.replace('.', '') not in settings.ALLOWED_EXTENSIONS or os.path.basename(model_name).startswith('.'):
+            if ext.replace('.', '') not in settings.ALLOWED_EXTENSIONS or os.path.basename(model_name).startswith('.')\
+                    or model_name.startswith('__MACOSX'):
                 continue
 
             file_size = myzip.getinfo(model).file_size
