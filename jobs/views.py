@@ -320,9 +320,10 @@ class JobDetailView(LoginRequiredMixin, UserPassesTestMixin, DetailView):
 
                     d['logfile']['path'] = '/' + os.path.relpath(d.pop('logfile_path'))  # settings.STATIC_URL + os.path.join(fpath, f'logs/{d["name"]}.log')
 
-                except TypeError or FileNotFoundError:
+                except TypeError:
                     d['logfile']['logdata'] = 'Could not load logfile'
-
+                except FileNotFoundError:
+                    d['logfile']['logdata'] = 'Logfile not found or deleted'
 
                 try:
                     taskresult = TaskResult.objects.get(task_id=d['task_id'])
