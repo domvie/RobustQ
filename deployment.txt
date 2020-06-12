@@ -1,0 +1,65 @@
+1. Install stuff (root)
+
+RUN apt-get update
+RUN apt-get install -y apt-utils vim curl apache2 apache2-utils mariadb-server libmariadbclient-dev git python3-dev libapache2-mod-wsgi-py3 rabbitmq-server python3-pip python3-virtualenv
+
+adduser user
+
+copy and configure:
+
+copy 000-default.cnf to /etc/apache2/sites-available 
+copy celery_init/default/ to /etc/
+copy celery_init/celerybeat and celeryd to /etc/init.d/ 
+
+2. Database
+
+mysql -u root -p $rootpassword
+
+CREATE DATABASE RobustQ;
+grant all privileges on DATABASE_NAME.* TO 'USER_NAME'@'localhost' identified by 'PASSWORD';
+(for remote access, prob not needed): grant all privileges on DATABASE_NAME.* TO 'USER_NAME'@'%' identified by 'PASSWORD'; 
+flush privileges;
+
+switch to user
+
+3. Get project files (in /home/user/Projects/)
+
+git clone https://github.com/domvie/RobustQ.git
+mkdir uploads
+mkdir logs
+mkdir logs/www
+
+4. Virtual env
+
+python3 -m virtualenv --python=/usr/bin/python3 /home/user/Projects/RobustQ/venv
+source /home/user/Projects/RobustQ/venv/bin/activate
+
+5. Install python stuff
+pip3 install -r requirements.txt
+touch RobustQ/local_config.py -> DB = {
+        'USER': 'DB_USER',
+        'PW': 'DB_PW',
+        'EMAILP': 'xxx',
+        'NAME': 'RobustQ'
+        }
+
+5. Check rights
+usermod -a -G www-data user
+chown user:group -R ./ 
+(chmod 755 -R ./*)
+chmod g+s ./
+set future ownership with ACL: setfacl -dRm u:www-data:rwX,g:www-data:rwX ./uploads/
+
+6. Check if django works:
+python3 manage.py createcachetable
+python3 manage.py createsuperuser
+python3 manage.py makemigrations
+python3 manage.py migrate
+python3 manage.py runserver
+/etc/init.d/celeryd start
+
+7. 
+
+
+
+
