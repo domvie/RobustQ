@@ -7,6 +7,7 @@ from django.template.defaultfilters import filesizeformat
 from jobs.views import NewJobMixin
 from jobs.models import Job
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.views.generic import TemplateView
 
 
 # # TODO class based view
@@ -50,3 +51,18 @@ class IndexView(NewJobMixin):
             context['running_jobs'] = running_jobs
             context['jobs'] = jobs
         return context
+
+
+class HelpView(TemplateView):
+
+    template_name = 'index/help.html'
+
+
+class PublicationsView(TemplateView):
+
+    template_name = 'index/publications.html'
+
+
+class PrivacyView(TemplateView):
+
+    template_name = 'index/privacy.html'

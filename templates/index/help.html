@@ -1,0 +1,25 @@
+{% extends 'includes/layout.html' %}
+
+{% block content %}
+    <main role="main" class="container py-5">
+    <div class="card">
+        <div class="card-header p-2">
+            <h3>Help</h3>
+        </div>
+        <div class="card-body p-2">
+            RobustQ is a web service to quantify cellular robustness of metabolic models. This is done by enumerating
+            the number of minimal cut-sets (MCS) and then calculating the probability of failure (PoF) of a given network.
+            You can learn more about the method <a href="{% url 'publications' %}">here.</a>
+            <br/>
+            <p class="pl-3">How to get started:</p>
+                <ol class="pl-5">
+                    <li><a href="{% url 'register' %}">Create an account</a> or <a href="{% url 'login' %}">Sign In</a></li>
+                    <li>Queue up your job by uploading a valid SBML model and setting the desired parameters.</li>
+                    <li>Wait for the job to finish. This may take up to 24 hours, depending on the model size.</li>
+                    <li>It may happen that your job fails. Please check the logs for further details or try tweaking parameters.</li>
+                </ol>
+
+        </div>
+    </div>
+    </main>
+{% endblock content %}

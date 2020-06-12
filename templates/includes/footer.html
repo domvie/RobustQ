@@ -31,7 +31,7 @@
                         <h5 class="widget-title">Quick Links<span></span></h5>
                         <ul class="thumbnail-widget">
                             <li>
-                                <div class="thumb-content"><a href="#." style="text-decoration: none" class="text text-info">Get Started</a></div>
+                                <div class="thumb-content"><a href="{% url 'help' %}" style="text-decoration: none" class="text text-info">Get Started</a></div>
                             </li>
                             <li>
                                 <div class="thumb-content"><a href="#." style="text-decoration: none" class="text text-info">Sourcecode</a></div>
@@ -45,17 +45,13 @@
                         <h5 class="widget-title">About Us<span></span></h5>
                         <ul class="thumbail-widget">
                             <li>
-                                <div class="thumb-content"><a href="#." style="text-decoration: none" class="text text-info">About</a></div>
+                                <div class="thumb-content"><a href="{% url 'help' %}" style="text-decoration: none" class="text text-info">Help</a></div>
                             </li>
                             <li>
-                                <div class="thumb-content"><a href="#." style="text-decoration: none" class="text text-info">Privacy & Data</a></div>
+                                <div class="thumb-content"><a href="{% url 'privacy' %}" style="text-decoration: none" class="text text-info">Privacy & Data</a></div>
                             </li>
                             <li>
-                                <div class="thumb-content"><a href="#." style="text-decoration: none" class="text text-info">Publications</a></div>
-                            </li>
-
-                            <li>
-                                <div class="thumb-content"><a href="#." style="text-decoration: none" class="text text-info">Legal</a></div>
+                                <div class="thumb-content"><a href="{% url 'publications' %}" style="text-decoration: none" class="text text-info">Publications</a></div>
                             </li>
                         </ul>
                     </div>

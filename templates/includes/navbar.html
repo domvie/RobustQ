@@ -25,8 +25,7 @@
       {% if user.is_authenticated %}
         <li class="nav-item"><a href="{% url 'jobs' %}" class="nav-link">Your Jobs</a></li>
       {% endif %}
-        <li class="nav-item"><a href="#" class="nav-link">Help</a></li>
-        <li class="nav-item"><a href="#" class="nav-link">About</a></li>
+        <li class="nav-item"><a href="{% url 'help' %}" class="nav-link">Help</a></li>
           <li class="nav-item">
         <div class="btn-group pt-1" role="group" aria-label="Login/Register">
             {% if user.is_authenticated %}

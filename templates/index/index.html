@@ -14,7 +14,7 @@
             {% endif %}
             {% else %}
         <h3>Welcome to RobustQ!</h3>
-            <p>RobustQ is a service to quantify cellular robustness. Learn more about it <a href="#" class="link text">here</a>.</p>
+            <p>RobustQ is a service to quantify cellular robustness. Learn more about it <a href="{% url 'help' %}" class="link text">here</a>.</p>
         {% endif %}
     </div>
         <div class="card-body p-2">
@@ -29,7 +29,7 @@
                     <li><a href="{% url 'register' %}">Create an account</a> or <a href="{% url 'login' %}">Sign In</a></li>
                     <li>Queue up your job by uploading a valid SBML model.</li>
                     <li>Wait for the job to finish. This may take up to 24 hours, depending on the model size.</li>
-                    <li>Once your job is finished, you will receive a notification via email.</li>
+                    <li>It may happen that your job fails. Please check the logs for further details or try tweaking parameters.</li>
                 </ol>
             {% endif %}
 
