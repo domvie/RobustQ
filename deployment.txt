@@ -45,10 +45,14 @@ touch RobustQ/local_config.py -> DB = {
 
 5. Check rights
 usermod -a -G www-data user
+usermod -g www-data user (primary group change)
 chown user:group -R ./ 
 (chmod 755 -R ./*)
 chmod g+s ./
-set future ownership with ACL: setfacl -dRm u:www-data:rwX,g:www-data:rwX ./uploads/
+set future ownership with ACL: 
+setfacl -d -R -m u::rwx ./
+setfacl -d -R -m o::rwx ./
+setfacl -d -R -m g::rwx ./
 
 6. Check if django works:
 python3 manage.py createcachetable
@@ -58,7 +62,7 @@ python3 manage.py migrate
 python3 manage.py runserver
 /etc/init.d/celeryd start
 
-7. 
+7. Copy/add Perl modules
 
 
 
