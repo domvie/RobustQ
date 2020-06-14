@@ -63,6 +63,16 @@ python3 manage.py runserver
 /etc/init.d/celeryd start
 
 7. Copy/add Perl modules
+cp scripts/perlModules/Math /usr/share/perl/5.30/Math/
+
+8. Enable SSL
+Get SSL key & cert
+edit default-ssl.cnf
+sudo a2enmod ssl
+sudo a2ensite default-ssl
+sudo a2enmod rewrite
+
+
 
 
 
