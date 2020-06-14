@@ -29,6 +29,7 @@ more-itertools==8.0.2
 mpmath==1.1.0
 mysqlclient==1.4.6
 numpy==1.18.1
+openpyxl==3.0.3
 optlang==1.4.4
 pandas==0.25.3
 parso==0.5.2
@@ -58,4 +59,5 @@ wcwidth==0.1.7
 WebOb==1.8.6
 WebTest==2.0.34
 Werkzeug==0.16.0
+xlsxwriter==1.2.9
 zipp==0.6.0
