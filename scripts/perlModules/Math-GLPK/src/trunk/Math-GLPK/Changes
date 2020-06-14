@@ -1,0 +1,6 @@
+Revision history for Perl extension Math::GLPK.
+
+0.01  Sat Nov  9 18:57:54 2013
+	- original version; created by h2xs 1.23 with options
+		-n Math::GLPK
+

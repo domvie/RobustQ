@@ -1,0 +1,5 @@
+# ecoli 5010 -> regular approach
+# ./david_bockmayr.pl -s models/ecoli_5010/sfile -m models/ecoli_5010/mfile -r models/ecoli_5010/rfile -v models/ecoli_5010/rvfile -t models/ecoli_5010/tfile -o models/ecoli_5010/efms.txt -l -p 8
+
+# ecoli 5010 -> k-shortest
+./david_bockmayr_k-shortest.pl -s models/ecoli_5010/sfile -m models/ecoli_5010/mfile -r models/ecoli_5010/rfile -v models/ecoli_5010/rvfile -t models/ecoli_5010/tfile -o models/ecoli_5010/efms_k-shortest.txt -l -p 8

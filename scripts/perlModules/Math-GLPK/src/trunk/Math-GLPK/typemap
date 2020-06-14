@@ -1,0 +1,4 @@
+glp_iocp* T_PTR
+glp_iptcp* T_PTR
+glp_smcp* T_PTR
+glp_prob* T_PTR

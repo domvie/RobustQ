@@ -1,0 +1,8 @@
+# simple toy network
+# ./defigueiredo_populate.pl -s models/simpleToyNetwork/sfile -m models/simpleToyNetwork/mfile -r models/simpleToyNetwork/rfile -v models/simpleToyNetwork/rvfile -o models/simpleToyNetwork/efms_populate.txt -l -t 8
+
+# simple toy network 2
+# ./defigueiredo_populate.pl -s models/simpleToyNetwork2/sfile -m models/simpleToyNetwork2/mfile -r models/simpleToyNetwork2/rfile -v models/simpleToyNetwork2/rvfile -o models/simpleToyNetwork2/efms_populate.txt -l -t 8
+
+# ecoli core with 5010 modes
+./defigueiredo_populate.pl -s models/ecoli_5010/sfile -m models/ecoli_5010/mfile -r models/ecoli_5010/rfile -v models/ecoli_5010/rvfile -o models/ecoli_5010/efms_populate.txt -l -t 8

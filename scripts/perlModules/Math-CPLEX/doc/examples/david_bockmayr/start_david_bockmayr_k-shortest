@@ -1,0 +1,5 @@
+# simple toy network
+./david_bockmayr_k-shortest.pl -s models/simpleToyNetwork/sfile -m models/simpleToyNetwork/mfile -r models/simpleToyNetwork/rfile -v models/simpleToyNetwork/rvfile -t models/simpleToyNetwork/tfile -o models/simpleToyNetwork/efms_k-shortest.txt -l -p 2
+
+# simple network reported in paper of David and Bockmayr
+./david_bockmayr_k-shortest.pl -s models/simpleDavidBockmayr/sfile -m models/simpleDavidBockmayr/mfile -r models/simpleDavidBockmayr/rfile -v models/simpleDavidBockmayr/rvfile -t models/simpleDavidBockmayr/tfile -o models/simpleDavidBockmayr/efms_k-shortest.txt -l -p 2

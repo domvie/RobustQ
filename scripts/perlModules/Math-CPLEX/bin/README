@@ -1,0 +1,5 @@
+In order to start creation of a new package,
+execute the following command:
+./start_package_creation.pl 0.05
+
+Of course, you need to use the correct version number!
