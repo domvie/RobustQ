@@ -1,3 +1,0 @@
-pod2cpanhtml ../src/trunk/Math-CPLEX/lib/Math/CPLEX/Base.pm > ../doc/html/Math_CPLEX_Base.html
-pod2cpanhtml ../src/trunk/Math-CPLEX/lib/Math/CPLEX/Env.pm  > ../doc/html/Math_CPLEX_Env.html
-pod2cpanhtml ../src/trunk/Math-CPLEX/lib/Math/CPLEX/OP.pm   > ../doc/html/Math_CPLEX_OP.html

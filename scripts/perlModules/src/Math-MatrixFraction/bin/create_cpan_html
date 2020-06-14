@@ -1,1 +1,0 @@
-pod2cpanhtml ../src/trunk/Math-MatrixFraction/lib/Math/MatrixFraction.pm > ../doc/html/Math_MatrixFraction.html

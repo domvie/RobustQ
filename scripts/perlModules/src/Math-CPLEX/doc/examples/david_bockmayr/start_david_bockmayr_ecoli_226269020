@@ -1,2 +1,0 @@
-# ecoli 226269020
-./david_bockmayr_k-shortest.pl -s models/ecoli_226269020/sfile -m models/ecoli_226269020/mfile -r models/ecoli_226269020/rfile -v models/ecoli_226269020/rvfile -t models/ecoli_226269020/tfile -o models/ecoli_226269020/efms_k-shortest.txt -l -p 2
