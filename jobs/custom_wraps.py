@@ -38,19 +38,14 @@ def revoke_chain_authority(a_shared_task):
             res = AbortableAsyncResult(self.request.id)
             job_id = cache.get('current_job')
             job_task = kwargs.get('job_id')
-            logger = get_task_logger(self.request.id)
-            logger.error(e.return_value)
 
             if job_id == job_task:
-                logger.info("Revoking from within RCE")
                 try:
                     pid = cache.get(f'pipeline_{job_id}').get('pid')
                     if pid:
                         os.kill(pid, signal.SIGTERM)
-                except ProcessLookupError:
-                    logger.error("No process matching PID found (RCE)")
-                except AttributeError:
-                    logger.error('Cache object returned null/couldnt get pid')
+                except:
+                    pass
             try:
                 res.abort()
             except:
@@ -62,6 +57,8 @@ def revoke_chain_authority(a_shared_task):
                 self.request.chain = None
             res = AbortableAsyncResult(self.request.id)
             res.abort()
+            logger = get_task_logger(self.request.id)
+            logger.error('Time limit exceeded for task!')
             try:
                 job_id = kwargs.get('job_id')
                 os.kill(cache.get(f'pipeline_{job_id}').get('pid'), signal.SIGKILL)

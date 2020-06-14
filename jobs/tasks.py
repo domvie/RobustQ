@@ -122,7 +122,7 @@ def check_abort_state(task_id, proc, logger):
     if result.is_aborted() or result.state == 'REVOKED':
         # respect aborted state, and terminate gracefully
         proc.kill()
-        raise ExecutionAbortedError(f'Task aborted by user')
+        raise ExecutionAbortedError('Task aborted by user')
 
 
 def call_repeatedly(secs, func, task_id, proc, logger):
