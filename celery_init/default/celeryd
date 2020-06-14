@@ -49,7 +49,7 @@ CELERYBEAT_LOG_FILE="/home/dominic/Projects/RobustQ/logs/celery/celerybeat.log"
 #   You need to create this user manually (or you can choose
 #   a user/group combination that already exists (e.g., nobody).
 CELERYD_USER="dominic"
-CELERYD_GROUP="dominic"
+CELERYD_GROUP="www-data"
 
 # If enabled pid and log directories will be created if missing,
 # and owned by the userid/group configured.
