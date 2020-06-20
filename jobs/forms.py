@@ -12,7 +12,7 @@ class JobSubmissionForm(forms.ModelForm):
     class Meta:
         model = Job
         fields = ['sbml_file', 'compression', 'cardinality_mcs', 'cardinality_pof', 'make_consistent',
-                  'skip_validation']
+                  'skip_validation', 'mutation_rate']
 
     def __init__(self, *args, **kwargs):
         super(JobSubmissionForm, self).__init__(*args, **kwargs)
@@ -33,6 +33,11 @@ class JobSubmissionForm(forms.ModelForm):
                                                                 'max': '20',
                                                                 'value': '8',
                                                                 'step': '1'})
+        self.fields['mutation_rate'].widget.attrs.update({'style': 'width: 3.5rem;',
+                                                                'min': '0',
+                                                                'max': '10',
+                                                                'value': '0.001',
+                                                                'step': '0.01'})
 
 
 class JobTable(tables.Table):
@@ -106,7 +111,7 @@ class JobTable(tables.Table):
     class Meta:
         model = Job
         fields = ['id', 'status', 'sbml_file', 'start_date', 'compression', 'cardinality_mcs',
-                  'cardinality_pof', 'make_consistent', 'result', 'duration', 'details']
+                  'cardinality_pof', 'mutation_rate', 'make_consistent', 'result', 'duration', 'details']
 
         attrs = {
             'class': 'table table-sm table-striped table-hover table-sortable',

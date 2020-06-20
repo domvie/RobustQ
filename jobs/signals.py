@@ -39,13 +39,15 @@ def start_job(sender, instance, created, **kwargs):
     cardinality_defi = instance.cardinality_mcs
     cardinality_pof = instance.cardinality_pof
     make_consistent = instance.make_consistent
+    mutation_rate = instance.mutation_rate
 
     # Send the task to the celery worker
     execute_pipeline.apply_async(kwargs={'job_id':id,
                                          'compression_checked':compression_checked,
                                          'cardinality_defi':cardinality_defi,
                                          'cardinality_pof':cardinality_pof,
-                                         'make_consistent':make_consistent},
+                                         'make_consistent':make_consistent,
+                                         'mutation_rate':mutation_rate},
                                  queue='jobs')
 
 
