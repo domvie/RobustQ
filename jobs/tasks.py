@@ -659,7 +659,7 @@ def mcs_to_binary(self, result, job_id, *args, **kwargs):
 
 @shared_task(bind=True, name="PoFcalc", base=AbortableTask)
 @revoke_chain_authority
-def pofcalc(self, result, job_id, cardinality, *args, **kwargs):
+def pofcalc(self, result, job_id, cardinality, mutation_rate, *args, **kwargs):
     """The 'main' task - calculates the Failure probability of the given network.
     Calls the PoFcalc executable as a subprocess and once its finished, processes the stdout
     to extract and save the results"""
@@ -674,13 +674,14 @@ def pofcalc(self, result, job_id, cardinality, *args, **kwargs):
     t = 10
     comp_suffix = 'comp' if kwargs['do_compress'] else 'uncomp'
 
-    logger.info(f'Calculating PoF up to d={d}')
+    logger.info(f'Calculating PoF up to d={d} with a mutation rate of {mutation_rate}')
 
     cmd_args = [os.path.join(BASE_DIR, 'bin/PoFcalc'),
                                          '-m', f'{model_name}.mcs.{comp_suffix}.binary',
                                          # '-o', f'{model_name}.mcs.comp',
                                          '-d', f'{d}',
-                                         '-t', f'{t}'
+                                         '-t', f'{t}',
+                                         '-', f'{mutation_rate}'
                 ]
 
     if kwargs['do_compress']:
@@ -798,7 +799,7 @@ def abort_task(self, *args, **kwargs):
 @shared_task(bind=True, name="execute_pipeline", base=AbortableTask, time_limit=settings.CELERY_TASK_TIME_LIMIT,
              soft_time_limit=settings.CELERY_TASK_SOFT_TIME_LIMIT)
 def execute_pipeline(self, job_id, compression_checked, cardinality_defi,
-                     cardinality_pof, make_consistent, *args, **kwargs):
+                     cardinality_pof, make_consistent, mutation_rate, *args, **kwargs):
     """
     Executes the pipeline for Pof calculation. Creates a celery chain from all tasks and calls it.
     Blocks celery workers from picking up another job until the execution is finished to ensure
@@ -834,7 +835,8 @@ def execute_pipeline(self, job_id, compression_checked, cardinality_defi,
                    create_dual_system.s(job_id=job_id, do_compress=compression_checked),
                    defigueiredo.s(job_id=job_id, cardinality=cardinality_defi, do_compress=compression_checked),
                    mcs_to_binary.s(job_id=job_id, do_compress=compression_checked),
-                   pofcalc.s(job_id=job_id, cardinality=cardinality_pof, do_compress=compression_checked),
+                   pofcalc.s(job_id=job_id, cardinality=cardinality_pof, do_compress=compression_checked,
+                             mutation_rate=mutation_rate),
                    update_db_post_run.s(job_id=job_id),
                    send_result_email.s(job_id=job_id)
                    ).on_error(abort_task.s(t_id=self.request.id)).apply_async()
