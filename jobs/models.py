@@ -55,7 +55,7 @@ class Job(models.Model):
                                                                     message='Wrong file type!'), sbml_validator],
                                  verbose_name='File', max_upload_size=settings.MAX_UPLOAD_SIZE)
     skip_validation = models.BooleanField(default=False)
-    mutation_rate = models.FloatField(default=0.001)
+    mutation_rate = models.FloatField(default=0.1)
 
     def get_absolute_url(self):
         return reverse('details', kwargs={'pk': self.pk})  # returns to e.g. jobs//details/1

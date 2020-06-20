@@ -672,6 +672,7 @@ def pofcalc(self, result, job_id, cardinality, mutation_rate, *args, **kwargs):
     os.chdir(path)
     d = cardinality
     t = 10
+    mutation_rate = mutation_rate / 100  # % conversion
     comp_suffix = 'comp' if kwargs['do_compress'] else 'uncomp'
 
     logger.info(f'Calculating PoF up to d={d} with a mutation rate of {mutation_rate}')

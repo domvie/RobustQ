@@ -35,9 +35,9 @@ class JobSubmissionForm(forms.ModelForm):
                                                                 'step': '1'})
         self.fields['mutation_rate'].widget.attrs.update({'style': 'width: 3.5rem;',
                                                                 'min': '0',
-                                                                'max': '10',
-                                                                'value': '0.001',
-                                                                'step': '0.01'})
+                                                                'max': '1000',
+                                                                'value': '0.1',
+                                                                'step': '0.1'})
 
 
 class JobTable(tables.Table):
