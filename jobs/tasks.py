@@ -672,7 +672,7 @@ def pofcalc(self, result, job_id, cardinality, mutation_rate, *args, **kwargs):
     os.chdir(path)
     d = cardinality
     t = 10
-    mutation_rate = mutation_rate / 100  # % conversion
+    mutation_rate = Job.objects.get(id=job_id).mutation_rate / 100  # % conversion
     comp_suffix = 'comp' if kwargs['do_compress'] else 'uncomp'
 
     logger.info(f'Calculating PoF up to d={d} with a mutation rate of {mutation_rate}')
@@ -682,7 +682,7 @@ def pofcalc(self, result, job_id, cardinality, mutation_rate, *args, **kwargs):
                                          # '-o', f'{model_name}.mcs.comp',
                                          '-d', f'{d}',
                                          '-t', f'{t}',
-                                         '-', f'{mutation_rate}'
+                                         '-p', f'{mutation_rate}'
                 ]
 
     if kwargs['do_compress']:
