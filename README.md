@@ -23,7 +23,7 @@ Run the following command to install all requirements at once:
 Create a new virtual environment in the project root folder. To do so with virtualenv:
 `python3 -m virtualenv --python=/usr/bin/python3 ./venv` 
 
-Activate it with `source /venv/bin/activate`
+Activate it with `source venv/bin/activate`
 
 Install Python dependencies with `pip3 install -r requirements.txt`.
 
