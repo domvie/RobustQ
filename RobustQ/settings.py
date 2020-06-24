@@ -26,12 +26,12 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # See https://docs.djangoproject.com/en/2.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'r)it34y2v5bqdwjgl+ax@&(xk-_tq4w6ra&b&72=$ay2!o@u2k'
+SECRET_KEY = '9jeßdihß2!20h3@123hds18283hdjhHDAhsdg1834Ljfa'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
+DEBUG = True
 
-ALLOWED_HOSTS = ['127.0.0.1', 'localhost', '141.244.131.95']
+ALLOWED_HOSTS = ['127.0.0.1', 'localhost', '*']
 
 
 # Application definition
@@ -221,7 +221,7 @@ FILE_UPLOAD_MAX_MEMORY_SIZE = 0
 
 DAYS_UNTIL_JOB_DELETE = 30
 
-if not DEBUG:
+if not DEBUG: # configures SSL etc when in production mode
     SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
     SECURE_SSL_REDIRECT = True
     SESSION_COOKIE_SECURE = True
