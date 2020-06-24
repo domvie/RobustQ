@@ -401,7 +401,7 @@ def download_results(request, type):
         response = HttpResponse(content_type='text/csv')
         response['Content-Disposition'] = f'attachment; filename=RobustQ_results_all.csv'
 
-        df.to_csv(path_or_buf=response, sep=';', float_format='%.2f', index=False, decimal=".")
+        df.to_csv(path_or_buf=response, sep=';', float_format='%.4f', index=False, decimal=".")
     else:
         xlfile = IO()
         xlwriter = pd.ExcelWriter(xlfile)
