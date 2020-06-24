@@ -113,7 +113,7 @@ def task_prerun_handler(sender=None, task_id=None, task=None, *args, **kwargs):
     # optionally logging on the Console as well as file
     stream_handler = logging.StreamHandler(sys.stdout)
     stream_handler.setFormatter(logging.Formatter('%(message)s'))
-    stream_handler.setLevel(logging.INFO)
+    stream_handler.setLevel(logging.WARNING)
 
     # Adding File Handle with file path. Filename is task_id
     logfilepath = os.path.join(path_logs, task.name+'.log')

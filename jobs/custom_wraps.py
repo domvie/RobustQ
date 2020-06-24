@@ -67,11 +67,3 @@ def revoke_chain_authority(a_shared_task):
             raise e
 
     return inner
-
-
-def test(taski):
-    @wraps(taski)
-    def inner(self, *args, **kwargs):
-        # 'In first wrap begin'
-        return taski(self, *args, **kwargs)
-    return inner

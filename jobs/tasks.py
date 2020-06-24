@@ -17,20 +17,13 @@ import shutil
 from celery import chain
 from celery.contrib.abortable import AbortableTask, AbortableAsyncResult
 import threading
-from .custom_wraps import revoke_chain_authority, ExecutionAbortedError, test
+from .custom_wraps import revoke_chain_authority, ExecutionAbortedError
 from django.conf import settings
 from django.core.mail import send_mail
 import signal
 from celery.exceptions import SoftTimeLimitExceeded
 import pandas as pd
 
-
-# TODO styling (also all browsers), production ready, task timeout limits (exc pipeline finishes before pofcalc)
-# TODO start writing
-# TODO figure out pipeline stuff
-# TODO about/help page, footer etc.
-# TODO split this file up - pipeline tasks and this
-# TODO - No such file or directory tmp file error
 
 BASE_DIR = os.getcwd()
 
@@ -170,7 +163,7 @@ def setup_process(self, result, job_id, *args, **kwargs):
     logger = get_task_logger(self.request.id)
     app.log.redirect_stdouts_to_logger(logger, loglevel=logging.INFO)
     if settings.DEBUG:
-        logger.info(f'Task {self.request.task} started with args={args}, kwargs={kwargs}. Job ID = {job_id}')
+        logger.debug(f'Task {self.request.task} started with args={args}, kwargs={kwargs}. Job ID = {job_id}')
 
     # Filepath extractions
     fpath = Job.objects.get(id=job_id).sbml_file.path
