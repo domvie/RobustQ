@@ -1,9 +1,0 @@
-celery
-django
-sudo apt install apache2 mariadb-server libmariadbclient-dev php libapache2-mod-php php-mysql python3-dev pip3
- rabbitmq-server libapache2-mod-wsgi-py3
-
-pip3 install virtualenv django jinja2 requests python-libsbml mysqlclient
-
-
-Perl modules: Math::Fraction, Math::MatrixFraction + autosplix
