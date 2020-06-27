@@ -5,18 +5,20 @@ a web service to quantify cellular robustness. This repository includes everythi
 ## Requirements
 
 To run the development server locally, you will need
-* Python 3.6 or higher
-* Django 2.x or higher
+* Python 3.6
+* Django 3.0.4
 * Celery 4.4
 * python-libsbml
 * mysqlclient
 * a MySQL/MariaDB database
+* RabbitMQ server
+* Cobrapy
 
 ## Installation
 Clone the repository:
 `git clone https://github.com/domvie/RobustQ.git`
 
-Run the following command to install all requirements at once:
+Run the following commands to install all requirements at once:
 `sudo apt-get update `
 `sudo apt-get install apache2 apache2-utils mariadb-server libmariadbclient-dev python3-dev libapache2-mod-wsgi-py3 rabbitmq-server python3-pip python3-virtualenv python3-openpyxl`
 
@@ -57,10 +59,13 @@ In order to run celery (the tool that runs our tasks) you will need a message br
 
 ### Set up Django
 
-`python3 manage.py createcachetable`
-`python3 manage.py createsuperuser`
 `python3 manage.py makemigrations`
+
 `python3 manage.py migrate`
+
+`python3 manage.py createcachetable`
+
+`python3 manage.py createsuperuser` (optional)
 
 To run the server type `python3 manage.py runserver` and head to http://localhost:8000/. If everything worked well so far, you should see the RobustQ landing page.
 
@@ -72,12 +77,12 @@ The following command should start two celery workers in the right configuration
 
 `celery multi start 2 -Q:1 celery -Q:2 jobs -c:1 1 -c:2 1 -l info -A RobustQ --pidfile=%n.pid --logfile=logs/%p%n.log -B`
 
-For daemonization scripts, refer to the folder celery_init/
+For daemonization scripts, please refer to the official Celery docs.
 
 
 ## Usage
 
-After account creation, You will need a valid SBML model. Supported filetypes are .xml, .json, or (in future versions) .zip. Simply upload your model, tweak the parameters to your liking and hit submit. This will queue the job and execute it accordingly (reminder: make sure you have your celery workers running. If you are unsure, head to the [official docs](https://docs.celeryproject.org/en/latest/getting-started/)). Example models are included under example_models/.
+After account creation, you will need a valid SBML model. Supported filetypes are .xml, .json, or (in future versions) .zip. Simply upload your model, tweak the parameters to your liking and hit submit. This will queue the job and execute it accordingly (reminder: make sure you have your celery workers running. If you are unsure, head to the [official docs](https://docs.celeryproject.org/en/latest/getting-started/)). Example models are included under example_models/.
 
 The following pictures may be outdated.
 
