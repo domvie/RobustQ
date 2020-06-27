@@ -26,7 +26,7 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # See https://docs.djangoproject.com/en/2.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = '9jeßdihß2!20h3@123hds18283hdjhHDAhsdg1834Ljfa'
+SECRET_KEY = '9je!kda!@gKlsN3@123hds18283hdjhHDAhsdg1834Ljfa'
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -155,7 +155,7 @@ STATIC_URL = '/static/'
 
 # TODO set to e.g. STATIC_ROOT = "/var/www/example.com/static/"
 # see https://docs.djangoproject.com/en/2.2/howto/static-files/
-STATIC_ROOT = '/home/dominic/Projects/RobustQ/static2/'
+STATIC_ROOT = '/home/robustq/Projects/RobustQ/static2/'
 
 STATICFILES_DIRS = [
     os.path.join(BASE_DIR, "static"),
@@ -212,8 +212,8 @@ CELERY_RESULT_BACKEND = 'django-db'
 CELERY_RESULT_EXTENDED = True
 CELERY_CACHE_BACKEND = 'django-cache'
 CELERY_TASK_TRACK_STARTED = True
-CELERY_TASK_TIME_LIMIT = 500000  # 86520
-CELERY_TASK_SOFT_TIME_LIMIT = 500000  # 86400
+CELERY_TASK_TIME_LIMIT = 86520  # 86520
+CELERY_TASK_SOFT_TIME_LIMIT = 86400  # 86400
 
 MAX_UPLOAD_SIZE = 15728640  # 15MB
 
@@ -223,11 +223,11 @@ DAYS_UNTIL_JOB_DELETE = 30
 
 if not DEBUG: # configures SSL etc when in production mode
     SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
-    SECURE_SSL_REDIRECT = True
+    SECURE_SSL_REDIRECT = True # could also set to False but then csrf validation fails
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
     # SECURE_HSTS_SECONDS = 1
-    LOGGING = {
+'''    LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
     'handlers': {
@@ -241,7 +241,4 @@ if not DEBUG: # configures SSL etc when in production mode
             'handlers': ['logfile'],
         },
     },
-}
-
-else:
-    SECURE_SSL_REDIRECT = False
+}'''
