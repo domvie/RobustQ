@@ -539,7 +539,11 @@ def defigueiredo(self, result, job_id, cardinality, *args, **kwargs):
 
     dm = cardinality
     # threads - parameter?
-    t = 10 # TODO adjust when necessary
+    try:
+        t = settings.MAX_THREADS_MCS
+    except:
+        t = 10
+
     comp_suffix = 'comp' if kwargs['do_compress'] else 'uncomp'
 
     logger.info(f'Getting MCS: using up to d={dm} (cardinality) and t={t} thread(s)')
@@ -664,7 +668,10 @@ def pofcalc(self, result, job_id, cardinality, mutation_rate, *args, **kwargs):
 
     os.chdir(path)
     d = cardinality
-    t = 10
+    try:
+        t = settings.MAX_THREADS_POFCALC
+    except:
+        t = 10
     mutation_rate = Job.objects.get(id=job_id).mutation_rate / 100  # % conversion
     comp_suffix = 'comp' if kwargs['do_compress'] else 'uncomp'
 
