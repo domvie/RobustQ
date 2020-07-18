@@ -5,7 +5,8 @@
             {% csrf_token %}
                 <fieldset class="form-group">
                     <legend class="border-bottom mb-4">Start New Job</legend>
-                        <label for="id_sbml_file_Addon01" class="label">Please upload your model(s) in valid SBML format.
+                        <label for="id_sbml_file_Addon01" class="label">To start a quantification task, please upload your metabolic model(s) in valid SBML format.
+                            We can calculate robustness even in genome-scale metabolic models. Many such models can publicly be found at various databases, such as <a href="http://bigg.ucsd.edu/models">BiGG Models</a> or <a href="https://www.ebi.ac.uk/biomodels/">BioModels</a>.<br/>
                         Size must be <{{ max_upload }}, allowed file extensions: <code>.{{ allowed_ext }}</code></label>
                 <br><small>Note: only valid models in .xml format will be queued from uploaded ZIP archives. Validation
                 is not possible for JSON models.</small>
@@ -41,7 +42,7 @@
                                         {{ job_form.compression }}
                         </div>
                         <div class="col-sm-6 text-left pl-1">
-                    <label for="compression">Compress network <small>(improves runtime but may not work with some models)</small>.</label>
+                    <label for="compression">Compress network <small>(linear compression of reactions improves runtime but may not work on some models)</small>.</label>
                         </div>
                     </div>
                     <div class="row">
@@ -49,7 +50,7 @@
                     {{ job_form.make_consistent }}
                             </div>
                             <div class="col-sm-6 text-left pl-1">
-                    <label for="make_consistent">Make model consistent <small>(may not work with some models)</small></label>
+                    <label for="make_consistent">Make model consistent <small>(in respect to growth function, may not work on some models)</small></label>
                             </div>
                     </div>
 
@@ -58,7 +59,7 @@
                     {{ job_form.cardinality_mcs }}
                         </div>
                         <div class="col-sm-6 text-left pl-1">
-                    <label for="cardinality">Cardinality for MCS count <small>(for larger models, only =< 3 feasible)</small></label><br>
+                    <label for="cardinality">Cardinality for MCS enumeration <small>(for larger models, only =< 3 feasible)</small></label><br>
                         </div>
                     </div>
 
