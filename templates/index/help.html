@@ -7,8 +7,12 @@
             <h3>Help</h3>
         </div>
         <div class="card-body p-2">
-            RobustQ is a web service to quantify cellular robustness of metabolic models. This is done by enumerating
-            the number of minimal cut-sets (MCS) and then calculating the probability of failure (PoF) of a given network.
+            RobustQ is a web service to quantify cellular robustness of metabolic models. Robustness is the ability of
+            a biological system to uphold its functionality in spite of perturbations. M.P. Gerstl et al. (2015) were the first
+            to describe a quantitative measure for robustness with a sound theoretical foundation, which is the backbone of this work. <br/>
+            We measure the counterpart of robustness by enumerating the number of minimal cut-sets (MCS) in a network and then calculating the probability of failure (PoF) of a network in respect to its objective function (e.g. biomass growth).
+            We focus only on the k-shortest MCSs since they have the highest impact on network robustness and enable us to evaluate even genome-scale metabolic models.
+            <br/>
             You can learn more about the method <a href="{% url 'publications' %}">here.</a>
             <br/>
             <p class="pl-3">How to get started:</p>
