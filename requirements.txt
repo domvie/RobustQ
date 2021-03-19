@@ -8,7 +8,7 @@ cobra==0.17.1
 coverage==5.0.3
 decorator==4.4.1
 depinfo==1.5.1
-Django==3.0.7
+Django==3.1.6
 django-celery-results==1.1.2
 django-crispy-forms==1.8.1
 django-debug-toolbar==2.1
