@@ -38,7 +38,7 @@ pickleshare==0.7.5
 pipdeptree==0.13.2
 prompt-toolkit==3.0.2
 ptyprocess==0.6.0
-Pygments==2.5.2
+Pygments==2.7.4
 python-dateutil==2.8.1
 python-libsbml==5.18.0
 python-libsbml-experimental==5.18.0
