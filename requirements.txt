@@ -9,7 +9,7 @@ coverage==5.0.3
 decorator==4.4.1
 depinfo==1.5.1
 Django==3.1.6
-django-celery-results==1.1.2
+django-celery-results==2.4.0
 django-crispy-forms==1.8.1
 django-debug-toolbar==2.1
 django-extensions==2.2.5
